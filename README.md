@@ -1,28 +1,28 @@
-CMPT 371 Final Project
+# CMPT 371 Final Project
 
-Team Members
+## Team Members
 
 Yuhao Gao 301545007
 
-[Member 2 Name]
+JunHang Wu 301435761
 
 [Member 3 Name]
 
 [Member 4 Name]
 
-Project Overview
+## Project Overview
 
 
-Technologies Used
-
-
-
-Installation and Setup
+## Technologies Used
 
 
 
-Usage
+## Installation and Setup
 
 
 
-Acknowledgments
+## Usage
+
+
+
+## Acknowledgments
