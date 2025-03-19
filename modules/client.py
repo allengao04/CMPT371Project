@@ -269,6 +269,6 @@ class Client:
 
 if __name__ == "__main__":
     # Change host to the server's IP address if needed.
-    client = Client(host="127.0.0.1", port=5000)
+    client = Client(host="142.58.209.94", port=5000)
     client.connect_to_server()
     client.run()

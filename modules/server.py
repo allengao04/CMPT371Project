@@ -319,5 +319,5 @@ class Server:
 
 # If running this module directly, start the server
 if __name__ == "__main__":
-    server = Server()
+    server = Server(host="142.58.209.94")
     server.start()
