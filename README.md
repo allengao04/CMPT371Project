@@ -6,7 +6,7 @@ Yuhao Gao 301545007
 
 JunHang Wu 301435761
 
-[Member 3 Name]
+Adam Siergiej 301562042
 
 [Member 4 Name]
 
