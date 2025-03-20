@@ -8,6 +8,8 @@ JunHang Wu 301435761
 
 Adam Siergiej 301562042
 
+Uros Kovacevic 301544276
+
 [Member 4 Name]
 
 ## Project Overview
