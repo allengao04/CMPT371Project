@@ -1,0 +1,14 @@
+{
+    "Questions": [
+        {
+            "question": "What is the capital of France?",
+            "options": ["Paris", "London", "Rome", "Berlin"],
+            "answer": "Paris"
+        },
+        {
+            "question": "2 + 2 * 2 = ?",
+            "options": ["6", "8", "4", "2"],
+            "answer": "6"
+        }
+    ]
+}
