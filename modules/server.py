@@ -39,8 +39,9 @@ class Server:
         self.microphones = []  # list of Microphone objects
 
         # Define the game world (grid size and obstacles)
-        self.map_width = 32
-        self.map_height = 24
+        # grid size is 20
+        self.map_width = 50 #
+        self.map_height = 40
         self.obstacles = set()
         # Example obstacles: a wall at x=15, y=5..9
         for y in range(5, 10):
@@ -116,8 +117,8 @@ class Server:
                     continue
                 # Assign new player ID and spawn position
                 player_id = next_player_id
+                spawn_x, spawn_y = self.find_spawn_position(player_id)
                 next_player_id += 1
-                spawn_x, spawn_y = self.find_spawn_position()
                 new_player = Player(player_id, spawn_x, spawn_y)
                 self.players[player_id] = new_player
                 self.clients[player_id] = client_sock
@@ -140,18 +141,20 @@ class Server:
             client_thread.start()
         print("Stopped accepting new clients.")
 
-    def find_spawn_position(self):
-        """Find a free spawn position (not on obstacle or occupied by another player)."""
-        # Simple strategy: return the first free tile found
-        for y in range(self.map_height):
-            for x in range(self.map_width):
-                if (x, y) in self.obstacles:
-                    continue
-                occupied = any(p.x == x and p.y == y for p in self.players.values())
-                if not occupied:
-                    return x, y
-        # Fallback to (0,0) if no free space found (should not happen in a reasonably sized map)
-        return 0, 0
+    def find_spawn_position(self, player_id):
+   # """Assign each player to one of the four corners of the grid."""
+        grid_width = self.map_width  # Example: 20
+        grid_height = self.map_height  # Example: 16
+
+        corner_positions = {
+            1: (0, 2),  # Top-left
+            2: (grid_width - 1, 2),  # Top-right
+            3: (0, grid_height - 1),  # Bottom-left
+            4: (grid_width - 1, grid_height - 1)  # Bottom-right
+        }
+
+        return corner_positions.get(player_id, (0, 0))  # Default to (0,0) if more than 4 players
+
 
     def handle_client(self, client_socket, player_id):
         """Receive and handle messages from a single client."""
@@ -319,5 +322,5 @@ class Server:
 
 # If running this module directly, start the server
 if __name__ == "__main__":
-    server = Server(host="142.58.209.94")
+    server = Server(host="192.168.1.71")
     server.start()
