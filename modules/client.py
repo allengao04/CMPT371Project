@@ -4,7 +4,7 @@ import threading
 import time
 from network import send_data, recv_data
 
-#player color 
+#setting player color 
 PLAYER_COLORS = {
     1: (255, 0, 0),    # Red
     2: (0, 255, 0),    # Green
@@ -44,7 +44,7 @@ class Client:
         # Calculate game area size
         game_area_width = self.map_width * self.GRID_SIZE
         game_area_height = self.map_height * self.GRID_SIZE
-
+        # set up the window size 
         self.screen = pygame.display.set_mode((game_area_width, game_area_height))
         
         pygame.display.set_caption("Multiplayer Quiz Game")
@@ -225,7 +225,7 @@ class Client:
                 # Draw players
                 for pid, info in players_snapshot.items():
                     rect = pygame.Rect(info["x"] * 20, info["y"] * 20, 20, 20)
-                    color = self.get_player_color(pid)
+                    color = self.get_player_color(pid) # get the user color 
                     pygame.draw.rect(self.screen, color, rect)
                 # Draw timer (if available)
 
@@ -254,21 +254,21 @@ class Client:
                 quiz_box_y = (800 - quiz_box_height) // 2  # Centered vertically
 
                 if in_question and current_question:
-                    # Draw semi-transparent overlay background
+                    # Draw semi-transparent overlay background( question background)
                     pygame.draw.rect(self.screen, (255, 255, 255), (quiz_box_x, quiz_box_y, quiz_box_width, quiz_box_height))
                     # overlay.fill((255, 255, 255, 230))  # white with slight transparency
                     # self.screen.blit(overlay, (quiz_box_x, quiz_box_y))
                     # Render question text
                     question_text = current_question["text"]
                     question_surface = pygame.font.Font(None, 48).render(question_text, True, self.color_overlay_text)
-                    question_x = quiz_box_x + 20  # Padding from the left
-                    question_y = quiz_box_y + 30  # Padding from the top
+                    question_x = quiz_box_x + 20  # question Padding from the left of  box 
+                    question_y = quiz_box_y + 30  # question Padding from the top of box 
                     self.screen.blit(question_surface, (quiz_box_x, quiz_box_y))
                     # Render multiple-choice options
                     for idx, option in enumerate(current_question["options"], start=1):
                         option_text = f"{idx}. {option}"
                         option_surface = pygame.font.Font(None, 36).render(option_text, True, self.color_overlay_text)
-                        option_x = quiz_box_x + 40  # Slight padding from the left
+                        option_x = quiz_box_x + 40  # Slight padding from the left 
                         option_y = quiz_box_y + 50 + (idx * 60)  # Even spacing
                         self.screen.blit(option_surface, (option_x, option_y))
 
