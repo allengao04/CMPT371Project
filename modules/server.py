@@ -1,6 +1,7 @@
 import socket
 import threading
 import time
+import pygame
 from network import send_data, recv_data
 from helper import args
 
@@ -39,6 +40,8 @@ class Server:
         self.start_time = None
         self.game_started = False
         self.game_over = False
+        self.lobby_active = True
+        self.countdown = None
 
         # Game state data structures
         self.players = {}      # {player_id: Player}
@@ -76,11 +79,21 @@ class Server:
         self.server_socket.listen()
         print(f"Server listening on {self.host}:{self.port}")
 
+        # Pygame initialization (MUST come before any Pygame operations)
+        pygame.init()
+        self.lobby_screen = pygame.display.set_mode((1100, 800))  # Minimum display setup
+        pygame.display.set_caption("Server Lobby")
+        self.font = pygame.font.SysFont('Arial', 24)
+        
+        # Verify initialization worked
+        if not pygame.display.get_init():
+            raise RuntimeError("Pygame display failed to initialize")
+
     def start(self):
-        """Start the server, accepting clients and managing game loop."""
-        # Start a thread to accept new client connections
+        """Main server loop"""
         accept_thread = threading.Thread(target=self.accept_clients, daemon=True)
         accept_thread.start()
+<<<<<<< HEAD
 
         # Main server loop: handle game timer and game-over conditions
         try:
@@ -102,6 +115,10 @@ class Server:
         finally:
             self.stop()
 
+=======
+        self.run_lobby()
+    
+>>>>>>> b40f55d (added base server lobby)
     def accept_clients(self):
         """Accept incoming client connections and initialize players."""
         next_player_id = 1
@@ -147,7 +164,62 @@ class Server:
             3: (0, grid_height - 1),  # Bottom-left
             4: (grid_width - 1, grid_height - 1)  # Bottom-right
         }
+<<<<<<< HEAD
         return corner_positions.get(player_id, (0, 0))
+=======
+
+        return corner_positions.get(player_id, (0, 0))  # Default to (0,0) if more than 4 players
+
+    def broadcast_lobby_update(self):
+        """Send current lobby state to all players"""
+        msg = {
+            "type": "lobby_state",
+            "players": {pid: p.ready for pid, p in self.players.items()}
+        }
+        self.broadcast(msg)
+
+    def run_lobby(self):
+        """Admin lobby UI"""
+        clock = pygame.time.Clock()
+        while self.lobby_active:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.shutdown()
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    if all(p.ready for p in self.players.values()):
+                        self.start_game_countdown()
+
+            # Draw lobby
+            self.lobby_screen.fill((30, 30, 60))
+            greeting = self.font.render(f"Welcome!!!", True, (255,255,255))
+            ip_text = self.font.render(f"Server IP: {self.host}", True, (255,255,255))
+            greeting_pos = greeting.get_rect(center=(550,50))
+            ip_text_pos = ip_text.get_rect(center=(550,100))
+            self.lobby_screen.blit(greeting, greeting_pos)
+            self.lobby_screen.blit(ip_text, ip_text_pos)
+            
+            y = 150
+            for pid, player in self.players.items():
+                status = "Ready" if player.ready else "Waiting"
+                color = (0,255,0) if player.ready else (255,0,0)
+                text = self.font.render(f"Player {pid}: {status}", True, color)
+                self.lobby_screen.blit(text, (50, y))
+                y += 40
+            
+            pygame.display.flip()
+            clock.tick(30)
+        
+        pygame.quit()
+
+    def start_game_countdown(self):
+        """10-second countdown before game starts"""
+        for i in range(10, 0, -1):
+            self.countdown = i
+            self.broadcast({"type": "countdown", "time": i})
+            time.sleep(1)
+        self.lobby_active = False
+        self.broadcast({"type": "game_start"})
+>>>>>>> b40f55d (added base server lobby)
 
     def handle_client(self, client_socket, player_id):
         """Receive and handle messages from a single client."""
@@ -156,6 +228,7 @@ class Server:
             if data is None:
                 break
             msg_type = data.get("type")
+
             if msg_type == "move":
                 direction = data.get("direction")
                 with self.lock:
@@ -177,6 +250,17 @@ class Server:
                 with self.lock:
                     state_msg = self.build_state_message()
                 self.broadcast(state_msg)
+            elif msg_type == "player_ready":
+                with self.lock:
+                    player = self.players.get(player_id)
+                    if player:
+                        player.ready = not player.ready
+                        self.broadcast_lobby_update()
+                        if all(p.ready for p in self.players.values()): # if every connected player is ready, we can start the game.
+                            self.start_game_
+            elif msg_type == "start_countdown":
+                if all(p.ready for p in self.players.values()):
+                    self.start_game_countdown()
             elif msg_type == "interact":
                 # Handle interaction: attempt to pick up a microphone (quiz)
                 with self.lock:
@@ -313,6 +397,7 @@ class Server:
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     # Parse Arguments
     ip_address = args.ip_address
     port = int(args.port)
@@ -321,3 +406,14 @@ if __name__ == "__main__":
     # Start Server
     server = Server(host=ip_address, port=port, time_limit=time_limit)
     server.start()
+=======
+    # Auto-detect available IP
+    host = socket.gethostbyname(socket.gethostname())
+    try:
+        server = Server(host=host)
+        server.start()
+    except OSError:
+        # Fallback to localhost if network unavailable
+        server = Server(host="127.0.0.1")
+        server.start()
+>>>>>>> b40f55d (added base server lobby)
