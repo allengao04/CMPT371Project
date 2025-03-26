@@ -146,7 +146,6 @@ class Client:
 
     def draw_lobby(self):
         """Render the lobby screen with visible UI elements"""
-        # ... [keep existing background and title code] ...
 
         # Ready button - CENTERED version
         button_width, button_height = 200, 50
