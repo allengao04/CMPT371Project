@@ -8,6 +8,14 @@ Check if you have python installed, then install `pygame`
 ```
 pip install pygame
 ```
+Check if you have `make` installed
+```
+# linux
+sudo apt-get install build-essential
+
+# mac
+brew install make
+```
 
 ## Usage
 ```
