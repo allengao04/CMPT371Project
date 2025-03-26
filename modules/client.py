@@ -3,6 +3,7 @@ import socket
 import threading
 import time
 from network import send_data, recv_data
+from helper import args
 
 #setting player color 
 PLAYER_COLORS = {
@@ -14,7 +15,7 @@ PLAYER_COLORS = {
 
 
 class Client:
-    def __init__(self, host='localhost', port=5000):
+    def __init__(self, host, port):
         # Grid and map setup
         self.GRID_SIZE = 20
         self.map_width = 50  # Number of tiles horizontally
@@ -319,13 +320,13 @@ class Client:
         # Clean up Pygame on exit
         pygame.quit()
 
-# Example usage (if running this module directly):
-# client = Client(host="127.0.0.1", port=5000)
-# client.connect_to_server()
-# client.run()
 
 if __name__ == "__main__":
+    # Parse Arguments
+    ip_address = args.ip_address
+    port = int(args.port)
+
     # Change host to the server's IP address if needed.
-    client = Client(host="192.168.1.71", port=5000)
+    client = Client(host=ip_address, port=port)
     client.connect_to_server()
     client.run()
