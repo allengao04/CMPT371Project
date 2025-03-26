@@ -2,6 +2,7 @@ import socket
 import threading
 import time
 from network import send_data, recv_data
+from helper import args
 
 # Optional: If game.py defines Player, Microphone classes or map data, those can be imported.
 # Otherwise, define minimal classes for internal use as done here.
@@ -24,7 +25,7 @@ class Microphone:
         self.active_by = None  # player id currently interacting (if any)
 
 class Server:
-    def __init__(self, host='0.0.0.0', port=5000, max_players=4, time_limit=120):
+    def __init__(self, host, port, time_limit, max_players=4):
         self.host = host
         self.port = port
         self.max_players = max_players
@@ -320,7 +321,13 @@ class Server:
             pass
         print("Server stopped.")
 
-# If running this module directly, start the server
+
 if __name__ == "__main__":
-    server = Server(host="192.168.1.71")
+    # Parse Arguments
+    ip_address = args.ip_address
+    port = int(args.port)
+    time_limit = int(args.time_limit)
+
+    # Start Server
+    server = Server(host=ip_address, port=port, time_limit=time_limit)
     server.start()
