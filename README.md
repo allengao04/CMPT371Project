@@ -11,10 +11,17 @@ pip install pygame
 Check if you have `make` installed
 ```
 # linux
+sudo-apt update
 sudo apt-get install build-essential
 
 # mac
 brew install make
+```
+
+Install if-config
+```
+sudo-apt update
+sudo apt install net-tools
 ```
 
 ## Usage
