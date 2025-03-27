@@ -160,10 +160,6 @@ class Server:
         self.broadcast(msg)
 
     def run_lobby(self):
-<<<<<<< HEAD
-=======
-
->>>>>>> b7fa312 (updated server.py)
         """Pygame-based lobby loop handling player readiness."""
         clock = pygame.time.Clock()
         while self.lobby_active:
@@ -175,10 +171,6 @@ class Server:
             self.lobby_screen.fill((30, 30, 60))
             title = self.font.render("Server Lobby - Waiting for Players", True, (255,255,255))
             self.lobby_screen.blit(title, (50, 50))
-<<<<<<< HEAD
-=======
-
->>>>>>> b7fa312 (updated server.py)
             y = 150
             
             for pid, player in self.players.items():
@@ -194,11 +186,7 @@ class Server:
 
     def start_game_countdown(self):
         """10-second countdown before game starts"""
-<<<<<<< HEAD
-        for i in range(5, 0, -1):
-=======
         for i in range(10, 0, -1):
->>>>>>> b7fa312 (updated server.py)
             self.countdown = i
             self.broadcast({"type": "countdown", "time": i})
             time.sleep(1)
@@ -206,11 +194,7 @@ class Server:
         self.broadcast({"type": "game_start"})
         self.start_time = time.time()
         self.game_started = True
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> b7fa312 (updated server.py)
+        
     def handle_client(self, client_socket, player_id):
         """Handle messages from a connected client."""
         while not self.game_over:
@@ -228,10 +212,7 @@ class Server:
                             self.start_game_countdown()
 
             elif msg_type == "move" and not self.lobby_active:
-<<<<<<< HEAD
-=======
                 # Handle movement input from client
->>>>>>> b7fa312 (updated server.py)
                 direction = data.get("direction")
                 with self.lock:
                     player = self.players.get(player_id)
@@ -265,10 +246,6 @@ class Server:
                             break
                     if mic_obj:
                         if mic_obj.lock.acquire(blocking=False):
-<<<<<<< HEAD
-                            # Successfully acquired the lock.
-=======
->>>>>>> b7fa312 (updated server.py)
                             if mic_obj.active_by is None:
                                 mic_obj.active_by = player_id
                                 question_msg = {
@@ -287,10 +264,6 @@ class Server:
                             send_data(self.clients[player_id], info_msg)
 
             elif msg_type == "answer" and not self.lobby_active:
-<<<<<<< HEAD
-                # Handle quiz answer submission from client
-=======
->>>>>>> b7fa312 (updated server.py)
                 mic_id = data.get("mic_id")
                 answer_idx = data.get("answer")
                 with self.lock:
@@ -312,24 +285,12 @@ class Server:
                     else:
                         mic_obj.active_by = None
                         mic_obj.lock.release()
-<<<<<<< HEAD
-                        result_msg = {"type": "answer_result", "correct": False}
-                        send_data(self.clients[player_id], {"type": "answer_result", "correct": False})
-                # Broadcast updated state if a question was answered correctly.
-                if mic_obj and mic_obj.answered:
-                    self.broadcast(state_msg)
-                    if self.game_over:
-                        self.broadcast_game_over()
-                        break
-            # (Handle additional message types here if needed)
-=======
                         send_data(self.clients[player_id], {"type": "answer_result", "correct": False})
                     if mic_obj.answered:
                         self.broadcast(state_msg)
                         if self.game_over:
                             self.broadcast_game_over()
 
->>>>>>> b7fa312 (updated server.py)
         # Cleanup on disconnect
         with self.lock:
             if player_id in self.players:
@@ -349,11 +310,6 @@ class Server:
                     state_msg = self.build_state_message()
                     self.broadcast(state_msg)
         client_socket.close()
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> b7fa312 (updated server.py)
     def build_state_message(self):
         """Construct game state message for clients."""
         time_left = max(0, self.time_limit - int(time.time() - self.start_time)) if self.start_time else self.time_limit
