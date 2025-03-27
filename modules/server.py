@@ -160,55 +160,19 @@ class Server:
         self.broadcast(msg)
 
     def run_lobby(self):
-<<<<<<< HEAD
-
         """Pygame-based lobby loop handling player readiness."""
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        """Admin lobby UI"""
->>>>>>> 1352998 (merged makefile changes)
-=======
->>>>>>> 1bb1d7a (added lobby for client)
->>>>>>> c9318a8 (added lobby for client)
         clock = pygame.time.Clock()
         while self.lobby_active:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-<<<<<<< HEAD
                     self.stop()
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> c9318a8 (added lobby for client)
                     self.countdown()
             
             self.lobby_screen.fill((30, 30, 60))
             title = self.font.render("Server Lobby - Waiting for Players", True, (255,255,255))
             self.lobby_screen.blit(title, (50, 50))
-
-<<<<<<< HEAD
-=======
-            # Draw lobby
-            self.lobby_screen.fill((30, 30, 60))
-            greeting = self.font.render(f"Welcome!!!", True, (255,255,255))
-            ip_text = self.font.render(f"Server IP: {self.host}", True, (255,255,255))
-            greeting_pos = greeting.get_rect(center=(550,50))
-            ip_text_pos = ip_text.get_rect(center=(550,100))
-            self.lobby_screen.blit(greeting, greeting_pos)
-            self.lobby_screen.blit(ip_text, ip_text_pos)
->>>>>>> 1352998 (merged makefile changes)
-=======
-                    self.countdown()
-            
-            self.lobby_screen.fill((30, 30, 60))
-            title = self.font.render("Server Lobby - Waiting for Players", True, (255,255,255))
-            self.lobby_screen.blit(title, (50, 50))
->>>>>>> 1bb1d7a (added lobby for client)
-            
->>>>>>> c9318a8 (added lobby for client)
             y = 150
+            
             for pid, player in self.players.items():
                 status = "Ready" if player.ready else "Waiting"
                 color = (0,255,0) if player.ready else (255,0,0)
@@ -218,56 +182,19 @@ class Server:
             
             pygame.display.flip()
             clock.tick(30)
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-        pygame.quit()
-
-    def start_game_countdown(self):
-        for i in range(5, 0, -1):
-=======
-        
->>>>>>> c9318a8 (added lobby for client)
         pygame.quit()
 
     def start_game_countdown(self):
         """10-second countdown before game starts"""
-        for i in range(10, 0, -1):
-<<<<<<< HEAD
-=======
->>>>>>> 1352998 (merged makefile changes)
-=======
-        pygame.quit()
-
-    def start_game_countdown(self):
         for i in range(5, 0, -1):
->>>>>>> 1bb1d7a (added lobby for client)
->>>>>>> c9318a8 (added lobby for client)
             self.countdown = i
             self.broadcast({"type": "countdown", "time": i})
             time.sleep(1)
         self.lobby_active = False
         self.broadcast({"type": "game_start"})
-<<<<<<< HEAD
         self.start_time = time.time()
         self.game_started = True
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-        self.start_time = time.time()
     
-=======
-        return corner_positions.get(player_id, (0, 0))
->>>>>>> 8a4ed93 (Added mutexes for each microphone (question). When the player attempts to answer a question, they lock the object. When the player answers (incorrectly or correctly) the lock is released and someone else can enter it.)
-=======
->>>>>>> 1352998 (merged makefile changes)
-=======
-        self.start_time = time.time()
-    
->>>>>>> 1bb1d7a (added lobby for client)
->>>>>>> c9318a8 (added lobby for client)
-
     def handle_client(self, client_socket, player_id):
         """Handle messages from a connected client."""
         while not self.game_over:
@@ -285,19 +212,6 @@ class Server:
                             self.start_game_countdown()
 
             elif msg_type == "move" and not self.lobby_active:
-                # Handle movement input from client
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-=======
-=======
-
->>>>>>> 1352998 (merged makefile changes)
-            if msg_type == "move":
->>>>>>> 8a4ed93 (Added mutexes for each microphone (question). When the player attempts to answer a question, they lock the object. When the player answers (incorrectly or correctly) the lock is released and someone else can enter it.)
-=======
->>>>>>> 1bb1d7a (added lobby for client)
->>>>>>> c9318a8 (added lobby for client)
                 direction = data.get("direction")
                 with self.lock:
                     player = self.players.get(player_id)
@@ -318,24 +232,8 @@ class Server:
                 with self.lock:
                     state_msg = self.build_state_message()
                 self.broadcast(state_msg)
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-
->>>>>>> c9318a8 (added lobby for client)
             elif msg_type == "interact" and not self.lobby_active:
                 # Handle interaction: attempt to pick up a microphone (quiz)
-<<<<<<< HEAD
-=======
->>>>>>> 8a4ed93 (Added mutexes for each microphone (question). When the player attempts to answer a question, they lock the object. When the player answers (incorrectly or correctly) the lock is released and someone else can enter it.)
-=======
-
-            elif msg_type == "interact" and not self.lobby_active:
-                # Handle interaction (attempt to use a microphone)
->>>>>>> 1bb1d7a (added lobby for client)
->>>>>>> c9318a8 (added lobby for client)
                 with self.lock:
                     player = self.players.get(player_id)
                     if not player:
@@ -346,13 +244,8 @@ class Server:
                             mic_obj = m
                             break
                     if mic_obj:
-<<<<<<< HEAD
-                        if mic_obj.lock.acquire(blocking=False):
-=======
-                        # Try to acquire the mic's lock without blocking
                         if mic_obj.lock.acquire(blocking=False):
                             # Successfully acquired the lock.
->>>>>>> c9318a8 (added lobby for client)
                             if mic_obj.active_by is None:
                                 mic_obj.active_by = player_id
                                 question_msg = {
@@ -369,25 +262,9 @@ class Server:
                         else:
                             info_msg = {"type": "info", "message": "Microphone is currently in use by another player."}
                             send_data(self.clients[player_id], info_msg)
-<<<<<<< HEAD
-
-            elif msg_type == "answer" and not self.lobby_active:
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
 
             elif msg_type == "answer" and not self.lobby_active:
                 # Handle quiz answer submission from client
-=======
-            elif msg_type == "answer":
-                # Handle quiz answer submission
->>>>>>> 8a4ed93 (Added mutexes for each microphone (question). When the player attempts to answer a question, they lock the object. When the player answers (incorrectly or correctly) the lock is released and someone else can enter it.)
-=======
-
-            elif msg_type == "answer" and not self.lobby_active:
-                # Handle quiz answer submission from client
->>>>>>> 1bb1d7a (added lobby for client)
->>>>>>> c9318a8 (added lobby for client)
                 mic_id = data.get("mic_id")
                 answer_idx = data.get("answer")
                 with self.lock:
@@ -409,71 +286,35 @@ class Server:
                     else:
                         mic_obj.active_by = None
                         mic_obj.lock.release()
-<<<<<<< HEAD
-                        send_data(self.clients[player_id], {"type": "answer_result", "correct": False})
-                    if mic_obj.answered:
-                        self.broadcast(state_msg)
-                        if self.game_over:
-                            self.broadcast_game_over()
-=======
                         result_msg = {"type": "answer_result", "correct": False}
-                        send_data(self.clients[player_id], result_msg)
+                        send_data(self.clients[player_id], {"type": "answer_result", "correct": False})
                 # Broadcast updated state if a question was answered correctly.
                 if mic_obj and mic_obj.answered:
                     self.broadcast(state_msg)
                     if self.game_over:
                         self.broadcast_game_over()
                         break
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> c9318a8 (added lobby for client)
-
+            # (Handle additional message types here if needed)
         # Cleanup on disconnect
         with self.lock:
             if player_id in self.players:
                 print(f"Player {player_id} disconnected.")
-                self.players.pop(player_id)
-                self.clients.pop(player_id)
+                self.players.pop(player_id, None)
+                self.clients.pop(player_id, None)
+                # Release any microphone held by the disconnecting player.
                 for m in self.microphones:
                     if m.active_by == player_id:
                         m.active_by = None
                         try:
                             m.lock.release()
                         except RuntimeError:
+                            # The lock may not be held by this thread; ignore if so.
                             pass
-                if not self.game_over and not self.lobby_active:
-                    self.broadcast(self.build_state_message())
-                elif self.lobby_active:
-                    self.broadcast_lobby_update()
+                if not self.game_over:
+                    state_msg = self.build_state_message()
+                    self.broadcast(state_msg)
         client_socket.close()
-=======
-
-            # Cleanup after client disconnects or game ends
-            with self.lock:
-                if player_id in self.players:
-                    print(f"Player {player_id} disconnected.")
-                    self.players.pop(player_id, None)
-                    self.clients.pop(player_id, None)
-                    # Release any microphone held by the disconnecting player.
-                    for m in self.microphones:
-                        if m.active_by == player_id:
-                            m.active_by = None
-                            try:
-                                m.lock.release()
-                            except RuntimeError:
-                                # The lock may not be held by this thread; ignore if so.
-                                pass
-                    # If game is still ongoing, broadcast updated state (player removed)
-                    if not self.game_over and not self.lobby_active:
-                        state_msg = self.build_state_message()
-                        self.broadcast(state_msg)
-                    elif self.lobby_active:
-                        # Update lobby state if in lobby
-                        self.broadcast_lobby_update()
-
-            client_socket.close()
->>>>>>> 1bb1d7a (added lobby for client)
-
+        
     def build_state_message(self):
         """Construct game state message for clients."""
         time_left = max(0, self.time_limit - int(time.time() - self.start_time)) if self.start_time else self.time_limit
