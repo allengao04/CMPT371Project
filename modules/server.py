@@ -2,6 +2,7 @@ import socket
 import threading
 import time
 import pygame
+import pygame
 from network import send_data, recv_data
 from helper import args
 
@@ -14,6 +15,7 @@ class Player:
         self.x = x
         self.y = y
         self.score = 0
+        self.ready = False
 
 class Microphone:
     def __init__(self, mid, x, y, question, options, correct_index):
@@ -89,11 +91,21 @@ class Server:
         if not pygame.display.get_init():
             raise RuntimeError("Pygame display failed to initialize")
 
+        # Pygame initialization (MUST come before any Pygame operations)
+        pygame.init()
+        self.lobby_screen = pygame.display.set_mode((1100, 800))  # Minimum display setup
+        pygame.display.set_caption("Server Lobby")
+        self.font = pygame.font.SysFont('Arial', 24)
+        
+        # Verify initialization worked
+        if not pygame.display.get_init():
+            raise RuntimeError("Pygame display failed to initialize")
+
     def start(self):
-        """Main server loop"""
+        """Start the server, accepting clients and managing game loop."""
+        # Start a thread to accept new client connections
         accept_thread = threading.Thread(target=self.accept_clients, daemon=True)
         accept_thread.start()
-<<<<<<< HEAD
 
         # Main server loop: handle game timer and game-over conditions
         try:
@@ -101,13 +113,17 @@ class Server:
                 time.sleep(1)
                 with self.lock:
                     if self.game_started and not self.game_over:
+                        # Update remaining time
                         current_time = time.time()
                         time_left = self.time_limit - int(current_time - self.start_time) if self.start_time else self.time_limit
                         if time_left <= 0:
+                            # Time up: end game
                             self.game_over = True
                             break
+                        # Send periodic state update (to sync timer on clients)
                         state_msg = self.build_state_message()
                         self.broadcast(state_msg)
+            # If loop exited due to game_over (time up), broadcast final scores and end
             if self.game_over:
                 self.broadcast_game_over()
         except KeyboardInterrupt:
@@ -115,10 +131,6 @@ class Server:
         finally:
             self.stop()
 
-=======
-        self.run_lobby()
-    
->>>>>>> b40f55d (added base server lobby)
     def accept_clients(self):
         """Accept incoming client connections and initialize players."""
         next_player_id = 1
@@ -129,9 +141,11 @@ class Server:
                 break  # Socket closed, stop accepting
             with self.lock:
                 if len(self.players) >= self.max_players:
+                    # Reject new connections if game is full
                     send_data(client_sock, {"type": "error", "message": "Server full"})
                     client_sock.close()
                     continue
+                # Assign new player ID and spawn position
                 player_id = next_player_id
                 spawn_x, spawn_y = self.find_spawn_position(player_id)
                 next_player_id += 1
@@ -139,9 +153,11 @@ class Server:
                 self.players[player_id] = new_player
                 self.clients[player_id] = client_sock
                 print(f"Player {player_id} connected from {addr}, spawn at ({spawn_x},{spawn_y})")
+                # Start game when the first player connects
                 if not self.game_started:
                     self.game_started = True
                     self.start_time = time.time()
+                # Send initial game state to the new player
                 init_msg = {
                     "type": "init",
                     "player_id": player_id,
@@ -150,13 +166,15 @@ class Server:
                     "time_left": self.time_limit if not self.start_time else max(0, self.time_limit - int(time.time() - self.start_time))
                 }
                 send_data(client_sock, init_msg)
+            # Launch a new thread to handle communication with this client
             client_thread = threading.Thread(target=self.handle_client, args=(client_sock, player_id), daemon=True)
             client_thread.start()
         print("Stopped accepting new clients.")
 
     def find_spawn_position(self, player_id):
-        grid_width = self.map_width
-        grid_height = self.map_height
+   # """Assign each player to one of the four corners of the grid."""
+        grid_width = self.map_width  # Example: 20
+        grid_height = self.map_height  # Example: 16
 
         corner_positions = {
             1: (0, 2),  # Top-left
@@ -164,201 +182,155 @@ class Server:
             3: (0, grid_height - 1),  # Bottom-left
             4: (grid_width - 1, grid_height - 1)  # Bottom-right
         }
-<<<<<<< HEAD
-        return corner_positions.get(player_id, (0, 0))
-=======
 
         return corner_positions.get(player_id, (0, 0))  # Default to (0,0) if more than 4 players
 
-    def broadcast_lobby_update(self):
-        """Send current lobby state to all players"""
-        msg = {
-            "type": "lobby_state",
-            "players": {pid: p.ready for pid, p in self.players.items()}
-        }
-        self.broadcast(msg)
-
-    def run_lobby(self):
-        """Admin lobby UI"""
-        clock = pygame.time.Clock()
-        while self.lobby_active:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.shutdown()
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                    if all(p.ready for p in self.players.values()):
-                        self.start_game_countdown()
-
-            # Draw lobby
-            self.lobby_screen.fill((30, 30, 60))
-            greeting = self.font.render(f"Welcome!!!", True, (255,255,255))
-            ip_text = self.font.render(f"Server IP: {self.host}", True, (255,255,255))
-            greeting_pos = greeting.get_rect(center=(550,50))
-            ip_text_pos = ip_text.get_rect(center=(550,100))
-            self.lobby_screen.blit(greeting, greeting_pos)
-            self.lobby_screen.blit(ip_text, ip_text_pos)
-            
-            y = 150
-            for pid, player in self.players.items():
-                status = "Ready" if player.ready else "Waiting"
-                color = (0,255,0) if player.ready else (255,0,0)
-                text = self.font.render(f"Player {pid}: {status}", True, color)
-                self.lobby_screen.blit(text, (50, y))
-                y += 40
-            
-            pygame.display.flip()
-            clock.tick(30)
-        
-        pygame.quit()
-
-    def start_game_countdown(self):
-        """10-second countdown before game starts"""
-        for i in range(10, 0, -1):
-            self.countdown = i
-            self.broadcast({"type": "countdown", "time": i})
-            time.sleep(1)
-        self.lobby_active = False
-        self.broadcast({"type": "game_start"})
->>>>>>> b40f55d (added base server lobby)
 
     def handle_client(self, client_socket, player_id):
         """Receive and handle messages from a single client."""
         while not self.game_over:
             data = recv_data(client_socket)
             if data is None:
+                # Client disconnected or connection error
                 break
             msg_type = data.get("type")
 
-            if msg_type == "move":
+            if msg_type == "player_ready":
+                # Handle ready status toggle
+                with self.lock:
+                    player = self.players.get(player_id)
+                    if player:
+                        player.ready = not player.ready
+                        print(f"Player {player_id} ready status: {player.ready}")
+                        self.broadcast_lobby_update()
+                        # Start countdown if all players are ready
+                        if self.players and all(p.ready for p in self.players.values()):
+                            self.start_game_countdown()
+
+            elif msg_type == "move" and not self.lobby_active:
+                # Handle movement input from client
                 direction = data.get("direction")
                 with self.lock:
                     player = self.players.get(player_id)
                     if player:
                         new_x, new_y = player.x, player.y
-                        if direction.lower() == "up":
+                        if direction == "up":
                             new_y -= 1
-                        elif direction.lower() == "down":
+                        elif direction == "down":
                             new_y += 1
-                        elif direction.lower() == "left":
+                        elif direction == "left":
                             new_x -= 1
-                        elif direction.lower() == "right":
+                        elif direction == "right":
                             new_x += 1
+                        # Bounds check and obstacle collision
                         if 0 <= new_x < self.map_width and 0 <= new_y < self.map_height:
                             if (new_x, new_y) not in self.obstacles:
                                 player.x = new_x
                                 player.y = new_y
+                # Broadcast updated state after movement
                 with self.lock:
                     state_msg = self.build_state_message()
                 self.broadcast(state_msg)
-            elif msg_type == "player_ready":
-                with self.lock:
-                    player = self.players.get(player_id)
-                    if player:
-                        player.ready = not player.ready
-                        self.broadcast_lobby_update()
-                        if all(p.ready for p in self.players.values()): # if every connected player is ready, we can start the game.
-                            self.start_game_
-            elif msg_type == "start_countdown":
-                if all(p.ready for p in self.players.values()):
-                    self.start_game_countdown()
-            elif msg_type == "interact":
-                # Handle interaction: attempt to pick up a microphone (quiz)
+
+            elif msg_type == "interact" and not self.lobby_active:
+                # Handle interaction (attempt to use a microphone)
                 with self.lock:
                     player = self.players.get(player_id)
                     if not player:
                         continue
+                    # Check if there's an unanswered microphone at player's position
                     mic_obj = None
                     for m in self.microphones:
                         if m.x == player.x and m.y == player.y and not m.answered:
                             mic_obj = m
                             break
                     if mic_obj:
-                        # NEW: Try to acquire the mic's lock without blocking
-                        if mic_obj.lock.acquire(blocking=False):
-                            # Successfully acquired the lock.
-                            # Double-check that no one is using it.
-                            if mic_obj.active_by is None:
-                                mic_obj.active_by = player_id
-                                question_msg = {
-                                    "type": "question",
-                                    "mic_id": mic_obj.id,
-                                    "question": mic_obj.question,
-                                    "options": mic_obj.options
-                                }
-                                send_data(self.clients[player_id], question_msg)
-                            else:
-                                mic_obj.lock.release()
-                                info_msg = {"type": "info", "message": "Microphone is currently in use by another player."}
-                                send_data(self.clients[player_id], info_msg)
+                        if mic_obj.active_by is None:
+                            # Lock this microphone to this player and send question
+                            mic_obj.active_by = player_id
+                            question_msg = {
+                                "type": "question",
+                                "mic_id": mic_obj.id,
+                                "question": mic_obj.question,
+                                "options": mic_obj.options
+                            }
+                            send_data(self.clients[player_id], question_msg)
                         else:
-                            # Could not acquire the lock; mic is busy.
+                            # Microphone already in use by another player
                             info_msg = {"type": "info", "message": "Microphone is currently in use by another player."}
                             send_data(self.clients[player_id], info_msg)
-            elif msg_type == "answer":
-                # Handle quiz answer submission
+
+            elif msg_type == "answer" and not self.lobby_active:
+                # Handle quiz answer submission from client
                 mic_id = data.get("mic_id")
                 answer_idx = data.get("answer")
+                # Determine correctness and update state
                 with self.lock:
                     mic_obj = next((m for m in self.microphones if m.id == mic_id), None)
                     if not mic_obj or mic_obj.answered:
+                        # Question already answered or invalid mic_id
                         continue
-                    # Verify the player is the one who locked the mic
+                    # Ensure this player activated the microphone
                     if mic_obj.active_by != player_id:
-                        continue
+                        continue  # Not the player currently answering this question
                     if answer_idx == mic_obj.correct_index:
-                        # Correct answer: mark quiz as answered, update score.
+                        # Correct answer
                         mic_obj.answered = True
                         mic_obj.active_by = None
-                        # Release the mic's lock since the quiz is complete.
-                        mic_obj.lock.release()
+                        # Update score
                         if player_id in self.players:
                             self.players[player_id].score += 1
+                        # Prepare state update and check game completion
                         state_msg = self.build_state_message()
                         all_answered = all(m.answered for m in self.microphones)
                         if all_answered:
                             self.game_over = True
+                        # Notify answering player of success
                         result_msg = {"type": "answer_result", "correct": True}
                         send_data(self.clients[player_id], result_msg)
                     else:
-                        # Incorrect answer: release the microphone for others.
-                        mic_obj.active_by = None
-                        mic_obj.lock.release()
+                        # Incorrect answer
+                        # Leave mic active_by as is, allowing the player to try again
                         result_msg = {"type": "answer_result", "correct": False}
                         send_data(self.clients[player_id], result_msg)
-                # Broadcast updated state if a question was answered correctly.
+                        # Do not broadcast state on incorrect answer
+                        mic_obj = None  # ensure we don't broadcast below
+                # If a question was answered correctly, broadcast updated state
                 if mic_obj and mic_obj.answered:
                     self.broadcast(state_msg)
                     if self.game_over:
+                        # If that was the last question, announce game over
                         self.broadcast_game_over()
                         break
-            # (Handle additional message types here if needed)
-        # Cleanup after client disconnects or game end.
+
+        # Cleanup after client disconnects or game ends
         with self.lock:
             if player_id in self.players:
                 print(f"Player {player_id} disconnected.")
+                # Remove player and free any mic they were using
                 self.players.pop(player_id, None)
                 self.clients.pop(player_id, None)
-                # Release any microphone held by the disconnecting player.
                 for m in self.microphones:
                     if m.active_by == player_id:
                         m.active_by = None
-                        try:
-                            m.lock.release()
-                        except RuntimeError:
-                            # The lock may not be held by this thread; ignore if so.
-                            pass
-                if not self.game_over:
+                # If game is still ongoing, broadcast updated state (player removed)
+                if not self.game_over and not self.lobby_active:
                     state_msg = self.build_state_message()
                     self.broadcast(state_msg)
+                elif self.lobby_active:
+                    # Update lobby state if in lobby
+                    self.broadcast_lobby_update()
         client_socket.close()
 
     def build_state_message(self):
         """Compose a game state message (players, microphones, time, etc.) for clients."""
+        # Compute remaining time
         time_left_val = None
         if self.game_started and self.start_time:
             elapsed = int(time.time() - self.start_time)
             remaining = self.time_limit - elapsed
             time_left_val = max(0, remaining)
+        # Build data dictionaries
         players_data = {pid: {"x": p.x, "y": p.y, "score": p.score} for pid, p in self.players.items()}
         mics_data = [{"id": m.id, "x": m.x, "y": m.y, "answered": m.answered} for m in self.microphones]
         msg = {"type": "state", "players": players_data, "microphones": mics_data}
@@ -397,7 +369,6 @@ class Server:
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     # Parse Arguments
     ip_address = args.ip_address
     port = int(args.port)
@@ -406,14 +377,3 @@ if __name__ == "__main__":
     # Start Server
     server = Server(host=ip_address, port=port, time_limit=time_limit)
     server.start()
-=======
-    # Auto-detect available IP
-    host = socket.gethostbyname(socket.gethostname())
-    try:
-        server = Server(host=host)
-        server.start()
-    except OSError:
-        # Fallback to localhost if network unavailable
-        server = Server(host="127.0.0.1")
-        server.start()
->>>>>>> b40f55d (added base server lobby)
