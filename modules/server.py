@@ -5,7 +5,6 @@ from network import send_data, recv_data
 from helper import args
 
 # Optional: If game.py defines Player, Microphone classes or map data, those can be imported.
-
 # Otherwise, define minimal classes for internal use as done here.
 
 class Player:
@@ -25,7 +24,7 @@ class Microphone:
         self.correct_index = correct_index
         self.answered = False
         self.active_by = None  # player id currently interacting (if any)
-        self.lock = threading.Lock()  # NEW: dedicated mutex lock for concurrency
+        self.lock = threading.RLock()  # NEW: dedicated mutex lock for concurrency
 
 # -------------------------------
 # Server Class
