@@ -150,6 +150,7 @@ class Server:
         }
         return corner_positions.get(player_id, (0, 0))
 
+
     def broadcast_lobby_update(self):
         """Send current lobby state to all players."""
         msg = {
@@ -159,17 +160,19 @@ class Server:
         self.broadcast(msg)
 
     def run_lobby(self):
+
         """Pygame-based lobby loop handling player readiness."""
         clock = pygame.time.Clock()
         while self.lobby_active:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.stop()
+                    self.countdown()
             
             self.lobby_screen.fill((30, 30, 60))
             title = self.font.render("Server Lobby - Waiting for Players", True, (255,255,255))
             self.lobby_screen.blit(title, (50, 50))
-            
+
             y = 150
             for pid, player in self.players.items():
                 status = "Ready" if player.ready else "Waiting"
@@ -183,8 +186,8 @@ class Server:
         pygame.quit()
 
     def start_game_countdown(self):
-        """Initiate countdown and transition to game start."""
-        for i in range(5, 0, -1):
+        """10-second countdown before game starts"""
+        for i in range(10, 0, -1):
             self.countdown = i
             self.broadcast({"type": "countdown", "time": i})
             time.sleep(1)
@@ -200,7 +203,6 @@ class Server:
             if data is None:
                 break
             msg_type = data.get("type")
-
             if msg_type == "player_ready" and self.lobby_active:
                 with self.lock:
                     player = self.players.get(player_id)
@@ -211,6 +213,7 @@ class Server:
                             self.start_game_countdown()
 
             elif msg_type == "move" and not self.lobby_active:
+                # Handle movement input from client
                 direction = data.get("direction")
                 with self.lock:
                     player = self.players.get(player_id)
@@ -231,8 +234,8 @@ class Server:
                 with self.lock:
                     state_msg = self.build_state_message()
                 self.broadcast(state_msg)
-
             elif msg_type == "interact" and not self.lobby_active:
+                # Handle interaction: attempt to pick up a microphone (quiz)
                 with self.lock:
                     player = self.players.get(player_id)
                     if not player:
