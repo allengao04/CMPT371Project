@@ -170,14 +170,19 @@ class Server:
             
             self.lobby_screen.fill((30, 30, 60))
             title = self.font.render("Server Lobby - Waiting for Players", True, (255,255,255))
-            self.lobby_screen.blit(title, (50, 50))
+            title_rect = title.get_rect(center=(self.lobby_screen.get_width()//2, 90))
+            server_ip = self.font.render(f" Server IP: {self.host}", True, (255,255,255))
+            server_rect = title.get_rect(center=(self.lobby_screen.get_width()//2, 50))
+            self.lobby_screen.blit(title,title_rect)
+            self.lobby_screen.blit(server_ip,server_rect)
             y = 150
             
             for pid, player in self.players.items():
                 status = "Ready" if player.ready else "Waiting"
                 color = (0,255,0) if player.ready else (255,0,0)
                 text = self.font.render(f"Player {pid}: {status}", True, color)
-                self.lobby_screen.blit(text, (50, y))
+                text_rec = text.get_rect(center=(self.lobby_screen.get_width()//2,y))
+                self.lobby_screen.blit(text, text_rec)
                 y += 40
             
             pygame.display.flip()
