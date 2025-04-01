@@ -1,11 +1,10 @@
 import socket
 import threading
 import time
+import random
+import json
 from network import send_data, recv_data
 from helper import args
-
-# Optional: If game.py defines Player, Microphone classes or map data, those can be imported.
-# Otherwise, define minimal classes for internal use as done here.
 
 class Player:
     def __init__(self, pid, x, y):
@@ -53,18 +52,34 @@ class Server:
         for y in range(5, 10):
             self.obstacles.add((15, y))
 
-        # Initialize quiz questions and microphone objects
-        q1 = "What is the capital of France?"
-        opts1 = ["Paris", "London", "Rome", "Berlin"]
-        q2 = "2 + 2 * 2 = ?"
-        opts2 = ["6", "8", "4", "2"]
-        q3 = "Which planet is known as the Red Planet?"
-        opts3 = ["Earth", "Mars", "Jupiter", "Saturn"]
-        self.microphones = [
-            Microphone(1, 10, 5, q1, opts1, correct_index=0),
-            Microphone(2, 4, 12, q2, opts2, correct_index=0),
-            Microphone(3, 20, 18, q3, opts3, correct_index=1)
-        ]
+        # Read quiz bank from file and randomly generate 10 quiz objects
+        try:
+            with open("./quizQuestions.json", "r") as f:
+                quiz_data = json.load(f)
+            all_questions = quiz_data.get("Questions", [])
+            # Convert the correct_index from string to int for each question.
+            for q in all_questions:
+                q["correct_index"] = int(q["correct_index"])
+            num_quiz = min(10, len(all_questions))
+            random.shuffle(all_questions)
+            selected_questions = all_questions[:num_quiz]
+            self.unused_questions = all_questions[num_quiz:]  # remaining unique questions
+
+            self.microphones = []
+            mic_id = 1
+            for question in selected_questions:
+                # Generate a random valid position (not on an obstacle)
+                while True:
+                    x = random.randint(0, self.map_width - 1)
+                    y = random.randint(0, self.map_height - 1)
+                    if (x, y) not in self.obstacles:
+                        break
+                self.microphones.append(Microphone(mic_id, x, y, question["question"], question["options"], question["correct_index"]))
+                mic_id += 1
+        except Exception as e:
+            print(f"Error loading quiz bank: {e}")
+            self.microphones = []
+            self.unused_questions = []
 
         # Synchronization lock for thread-safe state updates (global game state)
         self.lock = threading.Lock()
@@ -122,9 +137,11 @@ class Server:
                 self.players[player_id] = new_player
                 self.clients[player_id] = client_sock
                 print(f"Player {player_id} connected from {addr}, spawn at ({spawn_x},{spawn_y})")
+                
                 if not self.game_started:
                     self.game_started = True
                     self.start_time = time.time()
+                    
                 init_msg = {
                     "type": "init",
                     "player_id": player_id,
@@ -133,6 +150,7 @@ class Server:
                     "time_left": self.time_limit if not self.start_time else max(0, self.time_limit - int(time.time() - self.start_time))
                 }
                 send_data(client_sock, init_msg)
+                
             client_thread = threading.Thread(target=self.handle_client, args=(client_sock, player_id), daemon=True)
             client_thread.start()
         print("Stopped accepting new clients.")
@@ -155,6 +173,7 @@ class Server:
             data = recv_data(client_socket)
             if data is None:
                 break
+            
             msg_type = data.get("type")
             if msg_type == "move":
                 direction = data.get("direction")
@@ -177,6 +196,7 @@ class Server:
                 with self.lock:
                     state_msg = self.build_state_message()
                 self.broadcast(state_msg)
+                
             elif msg_type == "interact":
                 # Handle interaction: attempt to pick up a microphone (quiz)
                 with self.lock:
@@ -189,10 +209,8 @@ class Server:
                             mic_obj = m
                             break
                     if mic_obj:
-                        # NEW: Try to acquire the mic's lock without blocking
+                        # Try to acquire the mic's lock without blocking
                         if mic_obj.lock.acquire(blocking=False):
-                            # Successfully acquired the lock.
-                            # Double-check that no one is using it.
                             if mic_obj.active_by is None:
                                 mic_obj.active_by = player_id
                                 question_msg = {
@@ -210,6 +228,7 @@ class Server:
                             # Could not acquire the lock; mic is busy.
                             info_msg = {"type": "info", "message": "Microphone is currently in use by another player."}
                             send_data(self.clients[player_id], info_msg)
+
             elif msg_type == "answer":
                 # Handle quiz answer submission
                 mic_id = data.get("mic_id")
@@ -218,29 +237,51 @@ class Server:
                     mic_obj = next((m for m in self.microphones if m.id == mic_id), None)
                     if not mic_obj or mic_obj.answered:
                         continue
+
                     # Verify the player is the one who locked the mic
                     if mic_obj.active_by != player_id:
                         continue
+
                     if answer_idx == mic_obj.correct_index:
                         # Correct answer: mark quiz as answered, update score.
                         mic_obj.answered = True
                         mic_obj.active_by = None
+
                         # Release the mic's lock since the quiz is complete.
                         mic_obj.lock.release()
+
+                        # update player's score
                         if player_id in self.players:
                             self.players[player_id].score += 1
+
                         state_msg = self.build_state_message()
+
                         all_answered = all(m.answered for m in self.microphones)
                         if all_answered:
                             self.game_over = True
                         result_msg = {"type": "answer_result", "correct": True}
                         send_data(self.clients[player_id], result_msg)
+
+                        # Spawn a new quiz object if available and if one was answered correctly
+                        if self.unused_questions:
+                            new_question = self.unused_questions.pop(0)
+                            while True:
+                                new_x = random.randint(0, self.map_width - 1)
+                                new_y = random.randint(0, self.map_height - 1)
+                                if (new_x, new_y) not in self.obstacles:
+                                    break
+                            new_mic_id = max(m.id for m in self.microphones) + 1 if self.microphones else 1
+                            new_mic = Microphone(new_mic_id, new_x, new_y, new_question["question"], new_question["options"], new_question["correct_index"])
+                            self.microphones.append(new_mic)
                     else:
                         # Incorrect answer: release the microphone for others.
+                        # TODO: set cooldown on microphone-player pair such that the player who answer the question wrong need to wait to join back in, but other does not need to wait
+
                         mic_obj.active_by = None
                         mic_obj.lock.release()
                         result_msg = {"type": "answer_result", "correct": False}
                         send_data(self.clients[player_id], result_msg)
+
                 # Broadcast updated state if a question was answered correctly.
                 if mic_obj and mic_obj.answered:
                     self.broadcast(state_msg)
@@ -254,6 +295,7 @@ class Server:
                 print(f"Player {player_id} disconnected.")
                 self.players.pop(player_id, None)
                 self.clients.pop(player_id, None)
+
                 # Release any microphone held by the disconnecting player.
                 for m in self.microphones:
                     if m.active_by == player_id:
@@ -266,6 +308,7 @@ class Server:
                 if not self.game_over:
                     state_msg = self.build_state_message()
                     self.broadcast(state_msg)
+                    
         client_socket.close()
 
     def build_state_message(self):
@@ -275,13 +318,16 @@ class Server:
             elapsed = int(time.time() - self.start_time)
             remaining = self.time_limit - elapsed
             time_left_val = max(0, remaining)
+            
         players_data = {pid: {"x": p.x, "y": p.y, "score": p.score} for pid, p in self.players.items()}
         mics_data = [{"id": m.id, "x": m.x, "y": m.y, "answered": m.answered} for m in self.microphones]
         msg = {"type": "state", "players": players_data, "microphones": mics_data}
+        
         if time_left_val is not None:
             msg["time_left"] = time_left_val
         if self.game_over:
             msg["game_over"] = True
+            
         return msg
 
     def broadcast(self, data, exclude_id=None):
