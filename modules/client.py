@@ -257,11 +257,6 @@ class Client:
                 # If a quiz question is active, draw the question overlay
 
                 ## quiz box 
-                # quiz_box_width = 1000
-                # quiz_box_height = 600
-                # quiz_box_x = (1000 - quiz_box_width) // 2  # Centered horizontally
-                # quiz_box_y = (800 - quiz_box_height) // 2  # Centered vertically
-
                 quiz_box_x = 100
                 quiz_box_y = 100
                 quiz_box_width = 800
@@ -284,31 +279,6 @@ class Client:
                     return lines
 
                 if in_question and current_question:
-                    # # Draw semi-transparent overlay background( question background)
-                    # pygame.draw.rect(self.screen, (255, 255, 255), (quiz_box_x, quiz_box_y, quiz_box_width, quiz_box_height))
-                    # # overlay.fill((255, 255, 255, 230))  # white with slight transparency
-                    # # self.screen.blit(overlay, (quiz_box_x, quiz_box_y))
-                    # # Render question text
-                    # question_text = current_question["text"]
-                    # question_surface = pygame.font.Font(None, 36).render(question_text, True, self.color_overlay_text)
-                    # question_x = quiz_box_x + 20  # question Padding from the left of  box 
-                    # question_y = quiz_box_y + 30  # question Padding from the top of box 
-                    # self.screen.blit(question_surface, (quiz_box_x, quiz_box_y))
-                    # # Render multiple-choice options
-                    # for idx, option in enumerate(current_question["options"], start=1):
-                    #     option_text = f"{idx}. {option}"
-                    #     option_surface = pygame.font.Font(None, 36).render(option_text, True, self.color_overlay_text)
-                    #     option_x = quiz_box_x + 40  # Slight padding from the left 
-                    #     option_y = quiz_box_y + 50 + (idx * 60)  # Even spacing
-                    #     self.screen.blit(option_surface, (option_x, option_y))
-
-                    # # Render "Incorrect! Try again." message below the options if the answer was wrong
-                    # if last_answer_correct is False:
-                    #     feedback_surface = pygame.font.Font(None,32).render(" Incorrect! Try again.", True, (255, 0, 0))
-                    #     feedback_x = quiz_box_x + 40
-                    #     feedback_y = quiz_box_y + quiz_box_height - 60  # Place at the bottom
-                    #     self.screen.blit(feedback_surface, (feedback_x, feedback_y))
-
                     # Create an overlay surface with transparency and a border for UI enhancement
                     overlay = pygame.Surface((quiz_box_width, quiz_box_height), pygame.SRCALPHA)
                     overlay.fill((255, 255, 255, 230))  # White with slight transparency
