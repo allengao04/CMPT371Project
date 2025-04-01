@@ -369,7 +369,7 @@ class Client:
                     self.screen.blit(exit_text, (exit_x, y_pos + 50))
 
             pygame.display.flip()
-            clock.tick(30)
+            clock.tick(60)
 
         pygame.quit()
 

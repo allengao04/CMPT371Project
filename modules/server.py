@@ -170,11 +170,16 @@ class Server:
             
             self.lobby_screen.fill((30, 30, 60))
             title = self.font.render("Server Lobby - Waiting for Players", True, (255,255,255))
-            title_rect = title.get_rect(center=(self.lobby_screen.get_width()//2, 90))
             server_ip = self.font.render(f" Server IP: {self.host}", True, (255,255,255))
-            server_rect = title.get_rect(center=(self.lobby_screen.get_width()//2, 50))
+            server_port = self.font.render(f" Server Port: {self.port}", True, (255,255,255))
+
+            title_rect = title.get_rect(center=(self.lobby_screen.get_width()//2, 80))
+            ip_rect = title.get_rect(center=(self.lobby_screen.get_width()//2, 50))
+            port_rect = title.get_rect(center=(self.lobby_screen.get_width()//2, 20))
+
             self.lobby_screen.blit(title,title_rect)
-            self.lobby_screen.blit(server_ip,server_rect)
+            self.lobby_screen.blit(server_ip,ip_rect)
+            self.lobby_screen.blit(server_port,port_rect)
             y = 150
             
             for pid, player in self.players.items():
