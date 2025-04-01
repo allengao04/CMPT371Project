@@ -1,7 +1,6 @@
 import pygame
 import socket
 import threading
-import time
 from network import send_data, recv_data
 from helper import args
 
@@ -12,7 +11,6 @@ PLAYER_COLORS = {
     3: (0, 0, 255),    # Blue
     4: (255, 255, 0)   # Yellow
 }
-
 
 class Client:
     def __init__(self, host, port):
@@ -37,15 +35,19 @@ class Client:
         self.current_question = None   # {"id": ..., "text": ..., "options": [...]}
         self.last_answer_correct = None  # Tracks result of last answer attempt (for feedback)
 
+        # Lobby state
+        self.in_lobby = True
+        self.players_ready = {}
+        self.countdown = None
+        self.ready = False
+
         # Thread synchronization lock for state
         self.lock = threading.Lock()
 
         # Initialize Pygame for rendering
         pygame.init()
-        # Calculate game area size
         game_area_width = self.map_width * self.GRID_SIZE
         game_area_height = self.map_height * self.GRID_SIZE
-        # set up the window size 
         self.screen = pygame.display.set_mode((game_area_width, game_area_height))
         
         pygame.display.set_caption("Multiplayer Quiz Game")
@@ -68,9 +70,7 @@ class Client:
             with self.lock:
                 self.player_id = init_data["player_id"]
                 self.players = init_data.get("players", {})
-                self.microphones = init_data.get("microphones", [])
-                self.time_left = init_data.get("time_left", None)
-            print(f"Connected to server as Player {self.player_id}")
+            print(f"Connected as Player {self.player_id}")
         else:
             raise ConnectionError("Failed to receive initial game state from server.")
 
@@ -84,7 +84,19 @@ class Client:
                 break
             
             msg_type = data.get("type")
-            if msg_type == "state":
+            if data.get("type") == "lobby_state":
+                with self.lock:
+                    self.players_ready = data["players"]
+                    
+            elif data.get("type") == "countdown":
+                with self.lock:
+                    self.countdown = data["time"]
+                    
+            elif data.get("type") == "game_start":
+                with self.lock:
+                    self.in_lobby = False
+
+            elif msg_type == "state":
                 # Update game state (positions, scores, microphones, time)
                 with self.lock:
                     if "players" in data:
@@ -139,6 +151,41 @@ class Client:
         # Clean up when done
         self.sock.close()
 
+    def draw_lobby(self):
+        """Render the lobby screen with visible UI elements"""
+
+        # Ready button - CENTERED version
+        button_width, button_height = 200, 50
+        button_x = self.screen.get_width()//2 - button_width//2
+        button_y = self.screen.get_height()//2
+        self.button = pygame.Rect(button_x, button_y, button_width, button_height)  # Store as instance variable
+
+        # Draw button with hover effect
+        mouse_pos = pygame.mouse.get_pos()
+        button_color = (0, 200, 0) if self.button.collidepoint(mouse_pos) else (0, 150, 0)
+        pygame.draw.rect(self.screen, button_color, self.button)
+        
+        # Button text
+        button_text = "READY" if not self.ready else "UNREADY"
+        text_surf = self.font.render(button_text, True, (255, 255, 255))
+        text_rect = text_surf.get_rect(center=self.button.center)
+        self.screen.blit(text_surf, text_rect)
+        
+        # Instructions
+        help_font = pygame.font.SysFont('Arial', 24)
+        help_text = help_font.render("Click READY when all players have joined", 
+                                True, (200, 200, 200))
+        self.screen.blit(help_text, (self.screen.get_width()//2 - help_text.get_width()//2, 
+                                button_y + button_height + 20))
+        
+        # Countdown display
+        if self.countdown:
+            count_font = pygame.font.SysFont('Arial', 72)
+            count_text = count_font.render(str(self.countdown), True, (255, 255, 255))
+            count_rect = count_text.get_rect(center=(self.screen.get_width()//2, 
+                                                self.screen.get_height()//2 - 50))
+            self.screen.blit(count_text, count_rect)
+
     def send_move(self, direction):
         """Send a movement command (direction: 'up','down','left','right') to the server."""
         send_data(self.sock, {"type": "move", "direction": direction})
@@ -155,205 +202,211 @@ class Client:
     def get_player_color(self, player_id):
         """=Return a unique color for each player ID."""
         return PLAYER_COLORS.get(player_id, (200, 200, 200))  # Gray fallback
-
+    
+    
     def run(self):
         """Main loop for handling user input and rendering the game state."""
-        # Start the network listener thread
         listener = threading.Thread(target=self.network_listener, daemon=True)
         listener.start()
 
         clock = pygame.time.Clock()
         running = True
+        
         while running:
             # Handle Pygame events (input, quit)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                elif event.type == pygame.KEYDOWN:
-                    # If game over screen is up, any key can exit the game
-                    if self.game_over:
+                
+                # Handle lobby interactions
+                if self.in_lobby:
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if hasattr(self, 'button') and self.button.collidepoint(event.pos):
+                            self.ready = not self.ready
+                            send_data(self.sock, {"type": "player_ready"})
+                
+                # Handle game interactions (only when not in lobby and not game over)
+                elif not self.game_over:
+                    if event.type == pygame.KEYDOWN:
+                        if not self.in_question:
+                            # Movement keys (WASD or arrow keys)
+                            if event.key in (pygame.K_w, pygame.K_UP):
+                                self.send_move("up")
+                            elif event.key in (pygame.K_s, pygame.K_DOWN):
+                                self.send_move("down")
+                            elif event.key in (pygame.K_a, pygame.K_LEFT):
+                                self.send_move("left")
+                            elif event.key in (pygame.K_d, pygame.K_RIGHT):
+                                self.send_move("right")
+                            # Interaction key (E or Space) to trigger quiz at microphone
+                            elif event.key in (pygame.K_e, pygame.K_SPACE):
+                                self.send_interact()
+                        else:
+                            # If answering a question
+                            selected_index = None
+                            if event.key == pygame.K_1:
+                                selected_index = 0
+                            elif event.key == pygame.K_2:
+                                selected_index = 1
+                            elif event.key == pygame.K_3:
+                                selected_index = 2
+                            elif event.key == pygame.K_4:
+                                selected_index = 3
+                            
+                            if selected_index is not None and self.current_question:
+                                if 0 <= selected_index < len(self.current_question["options"]):
+                                    self.send_answer(self.current_question["id"], selected_index)
+                            
+                            # Cancel quiz with ESCAPE
+                            elif event.key == pygame.K_ESCAPE:
+                                with self.lock:
+                                    self.in_question = False
+                                    self.current_question = None
+                                    self.last_answer_correct = None
+                    
+                    # Handle game over (any key to exit)
+                    elif event.type == pygame.KEYDOWN and self.game_over:
                         running = False
-                        continue
-                    if not self.in_question:
-                        # Movement keys (WASD or arrow keys)
-                        if event.key in (pygame.K_w, pygame.K_UP):
-                            self.send_move("up")
-                        elif event.key in (pygame.K_s, pygame.K_DOWN):
-                            self.send_move("down")
-                        elif event.key in (pygame.K_a, pygame.K_LEFT):
-                            self.send_move("left")
-                        elif event.key in (pygame.K_d, pygame.K_RIGHT):
-                            self.send_move("right")
-                        # Interaction key (E or Space) to trigger quiz at microphone
-                        elif event.key in (pygame.K_e, pygame.K_SPACE):
-                            self.send_interact()
-                    else:
-                        # If currently answering a question, number keys select an answer
-                        selected_index = None
-                        if event.key == pygame.K_1:
-                            selected_index = 0
-                        elif event.key == pygame.K_2:
-                            selected_index = 1
-                        elif event.key == pygame.K_3:
-                            selected_index = 2
-                        elif event.key == pygame.K_4:
-                            selected_index = 3
-                        if selected_index is not None and self.current_question:
-                            # Ensure the selected option is valid, then send answer
-                            if 0 <= selected_index < len(self.current_question["options"]):
-                                self.send_answer(self.current_question["id"], selected_index)
-                                
-                        # Allow cancelling the quiz UI with ESCAPE
-                        if event.key == pygame.K_ESCAPE:
-                            with self.lock:
-                                self.in_question = False
-                                self.current_question = None
-                                self.last_answer_correct = None
 
-            # Drawing the game state
+            # Clear screen
             self.screen.fill(self.color_bg)
             
-            # Copy state under lock to avoid inconsistency while drawing
-            with self.lock:
-                players_snapshot = {pid: info.copy() for pid, info in self.players.items()}
-                mics_snapshot = [mic.copy() for mic in self.microphones]
-                time_left = self.time_left
-                in_question = self.in_question
-                current_question = self.current_question.copy() if self.current_question else None
-                last_answer_correct = self.last_answer_correct
-                game_over_flag = self.game_over
-
-            if not game_over_flag:
-                # Draw microphones that are not yet answered
-                for mic in mics_snapshot:
-                    if not mic.get("answered"):
-                        # Represent microphone as a rectangle on the grid
-                        rect = pygame.Rect(mic["x"] * 20, mic["y"] * 20, 20, 20)
-                        pygame.draw.rect(self.screen, self.color_microphone, rect)
-
-                # Draw players
-                for pid, info in players_snapshot.items():
-                    rect = pygame.Rect(info["x"] * 20, info["y"] * 20, 20, 20)
-                    color = self.get_player_color(pid) # get the user color 
-                    pygame.draw.rect(self.screen, color, rect)
-                # Draw timer (if available)
-
-                if time_left is not None:
-                    minutes = time_left // 60
-                    seconds = time_left % 60
-                    timer_text = f"Time: {minutes:02d}:{seconds:02d}"
-                    txt_surface = self.font.render(timer_text, True, self.color_text)
-                    self.screen.blit(txt_surface, (20, 20))
-
-                # Draw scores for each player
-                y_offset = 20
-                score_x = self.map_width * self.GRID_SIZE - 150
-                for pid, info in players_snapshot.items():
-                    score_text = f"Player {pid}: {info['score']}"
-                    txt_surface = self.font.render(score_text, True, self.color_text)
-                    # Display scores on the right side
-                    self.screen.blit(txt_surface, (score_x, y_offset))
-                    y_offset += 20
-                # If a quiz question is active, draw the question overlay
-
-                ## quiz box 
-                quiz_box_x = 100
-                quiz_box_y = 100
-                quiz_box_width = 800
-                quiz_box_height = 500
-
-                def wrap_text(text, font, max_width):
-                    """Split text into multiple lines that fit within max_width."""
-                    words = text.split(' ')
-                    lines = []
-                    current_line = ""
-                    for word in words:
-                        test_line = current_line + word + " "
-                        if font.size(test_line)[0] <= max_width:
-                            current_line = test_line
-                        else:
-                            lines.append(current_line.strip())
-                            current_line = word + " "
-                    if current_line:
-                        lines.append(current_line.strip())
-                    return lines
-
-                if in_question and current_question:
-                    # Create an overlay surface with transparency and a border for UI enhancement
-                    overlay = pygame.Surface((quiz_box_width, quiz_box_height), pygame.SRCALPHA)
-                    overlay.fill((255, 255, 255, 230))  # White with slight transparency
-                    pygame.draw.rect(overlay, (0, 0, 0), overlay.get_rect(), 2)  # Black border
-                    self.screen.blit(overlay, (quiz_box_x, quiz_box_y))
-
-                    # Set fonts for the question and options
-                    font_question = pygame.font.Font(None, 36)
-                    font_option = pygame.font.Font(None, 36)
-
-                    # Wrap the question text
-                    max_text_width = quiz_box_width - 40  # leave some horizontal padding
-                    wrapped_lines = wrap_text(current_question["text"], font_question, max_text_width)
-                    line_y = quiz_box_y + 20  # top padding inside the quiz box
-
-                    # Render each wrapped line of the question
-                    for line in wrapped_lines:
-                        line_surface = font_question.render(line, True, self.color_overlay_text)
-                        self.screen.blit(line_surface, (quiz_box_x + 20, line_y))
-                        line_y += font_question.get_linesize() + 5  # add small spacing between lines
-
-                    # Add some extra spacing after the question text before options
-                    option_y = line_y + 20
-                    for idx, option in enumerate(current_question["options"], start=1):
-                        option_text = f"{idx}. {option}"
-                        option_surface = font_option.render(option_text, True, self.color_overlay_text)
-                        self.screen.blit(option_surface, (quiz_box_x + 40, option_y))
-                        option_y += font_option.get_linesize() + 15  # spacing between options
-
-                    # Render feedback message if the last answer was incorrect
-                    if last_answer_correct is False:
-                        feedback_surface = pygame.font.Font(None, 32).render("Incorrect! Try again.", True, (255, 0, 0))
-                        feedback_y = quiz_box_y + quiz_box_height - 60  # bottom padding
-                        self.screen.blit(feedback_surface, (quiz_box_x + 40, feedback_y))
+            # Draw appropriate screen based on game state
+            if self.in_lobby:
+                self.draw_lobby()
             else:
-                # Game over: display final scores
-                overlay = pygame.Surface(self.screen.get_size())
-                overlay.fill(self.color_bg)  # Background color
-                self.screen.blit(overlay, (0, 0))
+                # Get thread-safe snapshot of game state
+                with self.lock:
+                    players_snapshot = {pid: info.copy() for pid, info in self.players.items()}
+                    mics_snapshot = [mic.copy() for mic in self.microphones]
+                    time_left = self.time_left
+                    in_question = self.in_question
+                    current_question = self.current_question.copy() if self.current_question else None
+                    last_answer_correct = self.last_answer_correct
+                    game_over_flag = self.game_over
 
-                font_title = pygame.font.Font(None, 80)  # Bigger font for title
-                title_surface = font_title.render("GAME OVER", True, self.color_text)
-                title_x = (1000 - title_surface.get_width()) // 2  # Center horizontally
-                title_y = 100  # Higher up on the screen
-                self.screen.blit(title_surface, (title_x, title_y))
-
-                sorted_scores = sorted(players_snapshot.items(), key=lambda item: item[1]["score"], reverse=True)
-
-                font_score = pygame.font.Font(None, 50)  # Larger font for scores
-                y_pos = title_y + 80  # Start below the title
-
-                for rank, (pid, info) in enumerate(sorted_scores, start=1):
-                    score_line = f"{rank}. Player {pid} - Score: {info['score']}"
-                    score_surface = font_score.render(score_line, True, self.color_text)
+                if not game_over_flag:
+                    # Draw microphones
+                    for mic in mics_snapshot:
+                        if not mic.get("answered"):
+                            rect = pygame.Rect(mic["x"] * 20, mic["y"] * 20, 20, 20)
+                            pygame.draw.rect(self.screen, self.color_microphone, rect)
                     
-                    # Center score text horizontally
-                    score_x = (1000 - score_surface.get_width()) // 2
-                    self.screen.blit(score_surface, (score_x, y_pos))
-                        
-                    y_pos += 50  # Increase spacing
+                    # Draw players
+                    for pid, info in players_snapshot.items():
+                        rect = pygame.Rect(info["x"] * 20, info["y"] * 20, 20, 20)
+                        color = self.get_player_color(pid)
+                        pygame.draw.rect(self.screen, color, rect)
+                    
+                    # Draw timer
+                    if time_left is not None:
+                        minutes = time_left // 60
+                        seconds = time_left % 60
+                        timer_text = f"Time: {minutes:02d}:{seconds:02d}"
+                        txt_surface = self.font.render(timer_text, True, self.color_text)
+                        self.screen.blit(txt_surface, (20, 20))
+                    
+                    # Draw scores
+                    y_offset = 20
+                    score_x = self.map_width * self.GRID_SIZE - 150
+                    for pid, info in players_snapshot.items():
+                        score_text = f"Player {pid}: {info['score']}"
+                        txt_surface = self.font.render(score_text, True, self.color_text)
+                        self.screen.blit(txt_surface, (score_x, y_offset))
+                        y_offset += 20
 
-                font_exit = pygame.font.Font(None, 40)
-                exit_surface = font_exit.render("Press any key to exit", True, self.color_text)
+                    def wrap_text(text, font, max_width):
+                        """Split text into multiple lines that fit within max_width."""
+                        words = text.split(' ')
+                        lines = []
+                        current_line = ""
+                        for word in words:
+                            test_line = current_line + word + " "
+                            if font.size(test_line)[0] <= max_width:
+                                current_line = test_line
+                            else:
+                                lines.append(current_line.strip())
+                                current_line = word + " "
+                        if current_line:
+                            lines.append(current_line.strip())
+                        return lines
+                    
+                    # Draw question if active
+                    if in_question and current_question:
+                        # Define quiz box dimensions and position (you can adjust these as needed)
+                        quiz_box_x = 100
+                        quiz_box_y = 100
+                        quiz_box_width = 800
+                        quiz_box_height = 500
 
-                exit_x = (1000 - exit_surface.get_width()) // 2  # Center horizontally
-                exit_y = y_pos + 50  # Below the last score
-                self.screen.blit(exit_surface, (exit_x, exit_y))
+                        # Create an overlay surface with transparency and a border for UI enhancement
+                        overlay = pygame.Surface((quiz_box_width, quiz_box_height), pygame.SRCALPHA)
+                        overlay.fill((255, 255, 255, 230))  # White with slight transparency
+                        pygame.draw.rect(overlay, (0, 0, 0), overlay.get_rect(), 2)  # Black border
+                        self.screen.blit(overlay, (quiz_box_x, quiz_box_y))
 
+                        # Set fonts for the question and options
+                        font_question = pygame.font.Font(None, 36)
+                        font_option = pygame.font.Font(None, 36)
+
+                        # Wrap the question text
+                        max_text_width = quiz_box_width - 40  # leave some horizontal padding
+                        wrapped_lines = wrap_text(current_question["text"], font_question, max_text_width)
+                        line_y = quiz_box_y + 20  # top padding inside the quiz box
+
+                        # Render each wrapped line of the question
+                        for line in wrapped_lines:
+                            line_surface = font_question.render(line, True, self.color_overlay_text)
+                            self.screen.blit(line_surface, (quiz_box_x + 20, line_y))
+                            line_y += font_question.get_linesize() + 5  # add small spacing between lines
+
+                        # Add some extra spacing after the question text before options
+                        option_y = line_y + 20
+                        for idx, option in enumerate(current_question["options"], start=1):
+                            option_text = f"{idx}. {option}"
+                            option_surface = font_option.render(option_text, True, self.color_overlay_text)
+                            self.screen.blit(option_surface, (quiz_box_x + 40, option_y))
+                            option_y += font_option.get_linesize() + 15  # spacing between options
+
+                        # Render feedback message if the last answer was incorrect
+                        if last_answer_correct is False:
+                            feedback_surface = pygame.font.Font(None, 32).render("Incorrect! Try again.", True, (255, 0, 0))
+                            feedback_y = quiz_box_y + quiz_box_height - 60  # bottom padding
+                            self.screen.blit(feedback_surface, (quiz_box_x + 40, feedback_y))
+                
+                else:
+                    # Draw game over screen
+                    overlay = pygame.Surface(self.screen.get_size())
+                    overlay.fill(self.color_bg)
+                    self.screen.blit(overlay, (0, 0))
+                    
+                    # Title
+                    title_font = pygame.font.Font(None, 80)
+                    title = title_font.render("GAME OVER", True, self.color_text)
+                    title_x = (self.screen.get_width() - title.get_width()) // 2
+                    self.screen.blit(title, (title_x, 100))
+                    
+                    # Scores
+                    sorted_scores = sorted(players_snapshot.items(), 
+                                        key=lambda item: item[1]["score"], reverse=True)
+                    y_pos = 180
+                    for rank, (pid, info) in enumerate(sorted_scores, start=1):
+                        score_text = f"{rank}. Player {pid}: {info['score']}"
+                        text = pygame.font.Font(None, 50).render(score_text, True, self.color_text)
+                        text_x = (self.screen.get_width() - text.get_width()) // 2
+                        self.screen.blit(text, (text_x, y_pos))
+                        y_pos += 50
+                    
+                    # Exit prompt
+                    exit_text = pygame.font.Font(None, 40).render(
+                        "Press any key to exit", True, self.color_text)
+                    exit_x = (self.screen.get_width() - exit_text.get_width()) // 2
+                    self.screen.blit(exit_text, (exit_x, y_pos + 50))
 
             pygame.display.flip()
-            clock.tick(30)  # Cap the frame rate to 30 FPS
+            clock.tick(60)
 
-        # Clean up Pygame on exit
         pygame.quit()
-
 
 if __name__ == "__main__":
     # Parse Arguments
