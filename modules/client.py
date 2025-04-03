@@ -140,7 +140,13 @@ class Client:
                         self.players = data["players"]  # update final scores
                 print("Game over received from server.")
                 break
-            # (Other message types like "info" can be handled similarly)
+
+            elif msg_type == "info":
+                message = data.get("message", "")
+                print(f"[INFO]: {message}")
+                with self.lock:
+                    self.info_message = message
+                    self.info_message_time = time.time()
         # Clean up when done
         self.sock.close()
 
@@ -367,7 +373,9 @@ class Client:
                         "Press any key to exit", True, self.color_text)
                     exit_x = (self.screen.get_width() - exit_text.get_width()) // 2
                     self.screen.blit(exit_text, (exit_x, y_pos + 50))
-
+            if hasattr(self, 'info_message') and time.time() - self.info_message_time < 3:
+                msg_surface = self.font.render(self.info_message, True, (255, 0, 0))
+                self.screen.blit(msg_surface, (self.screen.get_width()//2 - msg_surface.get_width()//2, 10))    
             pygame.display.flip()
             clock.tick(60)
 
