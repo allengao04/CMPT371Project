@@ -26,6 +26,7 @@ class Microphone:
         self.answered = False
         self.active_by = None  # player id currently interacting (if any)
         self.lock = threading.RLock()  # Dedicated lock for concurrency control
+        self.cooldowns = {}  # Dict: {player_id: timestamp_until_accessible}
 
 class Server:
     def __init__(self, host, port, max_players=4, time_limit=120):
@@ -278,8 +279,14 @@ class Server:
                             break
 
                     if mic_obj:
+                        # Check if the player is on cooldown for this mic:
+                        if mic_obj.cooldowns.get(player_id, 0) > time.time():
+                            info_msg = {"type": "info", "message": "Please wait 3 seconds before trying again."}
+                            send_data(self.clients[player_id], info_msg)
+                            continue
+
+                        # Try to acquire the lock:
                         if mic_obj.lock.acquire(blocking=False):
-                            # Successfully acquired the lock.
                             if mic_obj.active_by is None:
                                 mic_obj.active_by = player_id
                                 question_msg = {
@@ -299,7 +306,6 @@ class Server:
                             send_data(self.clients[player_id], info_msg)
 
             elif msg_type == "answer" and not self.lobby_active:
-                # Handle quiz answer submission from client
                 mic_id = data.get("mic_id")
                 answer_idx = data.get("answer")
 
@@ -311,6 +317,7 @@ class Server:
                         continue
 
                     if answer_idx == mic_obj.correct_index:
+                        # Correct answer branch
                         mic_obj.answered = True
                         mic_obj.active_by = None
                         mic_obj.lock.release()
@@ -342,16 +349,32 @@ class Server:
                     else: # Incorrect answer: release the microphone for others.
                         #TODO: Set cooldown on mic-player pair, such that when player exist the mic object, it needs to wait until it can enter the mic object again, but other players does not need to wait
                         mic_obj.active_by = None
+                        mic_obj.cooldowns[player_id] = time.time() + 3
                         mic_obj.lock.release()
-                        result_msg = {"type": "answer_result", "correct": False}
-                        send_data(self.clients[player_id], result_msg)
-                        
-                # Broadcast updated state if a question was answered correctly.
+                        send_data(self.clients[player_id], {"type": "answer_result", "correct": False})
                 if mic_obj and mic_obj.answered:
                     self.broadcast(state_msg)
                     if self.game_over:
                         self.broadcast_game_over()
                         break
+
+            elif msg_type == "cancel_quiz" and not self.lobby_active:
+                mic_id = data.get("mic_id")
+                if mic_id is None:
+                    # Optionally log or send back an error
+                    continue
+                with self.lock:
+                    mic_obj = next((m for m in self.microphones if m.id == mic_id), None)
+                    if mic_obj and mic_obj.active_by == player_id:
+                        mic_obj.active_by = None
+                        try:
+                            mic_obj.lock.release()
+                        except RuntimeError:
+                            pass
+                        mic_obj.cooldowns[player_id] = time.time() + 3
+                        info_msg = {"type": "info", "message": "Quiz cancelled. You may try again."}
+                        send_data(self.clients[player_id], info_msg)
+
             # (Handle additional message types here if needed)
 
         # Cleanup on disconnect
