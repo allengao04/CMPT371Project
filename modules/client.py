@@ -140,7 +140,13 @@ class Client:
                         self.players = data["players"]  # update final scores
                 print("Game over received from server.")
                 break
-            # (Other message types like "info" can be handled similarly)
+
+            elif msg_type == "info":
+                message = data.get("message", "")
+                print(f"[INFO]: {message}")
+                with self.lock:
+                    self.info_message = message
+                    self.info_message_time = time.time()
         # Clean up when done
         self.sock.close()
 
@@ -234,6 +240,7 @@ class Client:
                             # Interaction key (E or Space) to trigger quiz at microphone
                             elif event.key in (pygame.K_e, pygame.K_SPACE):
                                 self.send_interact()
+
                         else:
                             # If answering a question
                             selected_index = None
@@ -245,6 +252,13 @@ class Client:
                                 selected_index = 2
                             elif event.key == pygame.K_4:
                                 selected_index = 3
+                            elif event.key == pygame.K_ESCAPE:
+                                mic_id = self.current_question["id"] if self.current_question else None
+                                with self.lock:
+                                    self.in_question = False
+                                    self.current_question = None
+                                    self.last_answer_correct = None
+                                send_data(self.sock, {"type": "cancel_quiz", "mic_id": mic_id})
                             
                             if selected_index is not None and self.current_question:
                                 if 0 <= selected_index < len(self.current_question["options"]):
@@ -367,7 +381,9 @@ class Client:
                         "Press any key to exit", True, self.color_text)
                     exit_x = (self.screen.get_width() - exit_text.get_width()) // 2
                     self.screen.blit(exit_text, (exit_x, y_pos + 50))
-
+            if hasattr(self, 'info_message') and time.time() - self.info_message_time < 3:
+                msg_surface = self.font.render(self.info_message, True, (255, 0, 0))
+                self.screen.blit(msg_surface, (self.screen.get_width()//2 - msg_surface.get_width()//2, 10))    
             pygame.display.flip()
             clock.tick(60)
 
