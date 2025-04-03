@@ -268,6 +268,12 @@ class Server:
                                             self.players[self.server_player_id].score += 1
                                             self.last_answer_correct = True
                                             print("Server answered correctly!")
+
+                                            # ensure game over appears if the server has answered all the questions
+                                            if all(m.answered for m in self.microphones):
+                                                self.game_over = True
+                                            self.broadcast(self.build_state_message())
+
                                         else:
                                             # On wrong answer, show feedback and keep the quiz overlay active.
                                             self.last_answer_correct = False
