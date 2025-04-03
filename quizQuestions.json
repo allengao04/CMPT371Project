@@ -21,11 +21,6 @@
             "correct_index": "1"
         },
         {
-            "question": "Which of the following is true from a layered architecture perspective?",
-            "options": ["A bridge works one layer lower than a repeater", "A hub can also perform the functions of a bridge", "A repeater works one layer higher than a layer-3 switch", "None of the above"],
-            "correct_index": "3"
-        },
-        {
             "question": "An EM Wave's wavelength depends on:",
             "options": ["propagation speed", "transmission speed", "bandwidth", "all of the above"],
             "correct_index": "0"
@@ -41,19 +36,9 @@
             "correct_index": "1"
         },
         {
-            "question": "In WiFi, the duration field in the header indicates in microseconds ...",
-            "options": ["how long the current frame will last", "how long the current frame and its acknowledgement will last", "how long the current sequence will last", "how much is remaining in NAVvvvvv"],
-            "correct_index": "1"
-        },
-        {
             "question": "In an IEEE 802.1Q VLAN, all bridges must implement the IEEE 802.1Q's VLAN field",
             "options": ["True", "False", "", ""],
             "correct_index": "1"
-        },
-        {
-            "question": "In a WiFi subnet, stations A and B each send an RTS to station C. Both RTS packets arrive at the exact same time at C. Therefore, C will:",
-            "options": ["send a CTS to each of A and B", "send a CTS to either A or B, selected randomly", "not send any CTS", "ask A and B to resend their RTS after a random backoff"],
-            "correct_index": "2"
         },
         {
             "question": "In Ethernet, the CSMA/CD algorithm gives up transmitting a frame after 16 successive collisions, but the MAC sublayer itself will try to retransmit that frame after a timeout",
@@ -71,11 +56,6 @@
             "correct_index": "3"
         },
         {
-            "question": "Two applications are running on the same device. One uses TCP and the other uses UDP. Can the two applications use the same port number simultaneously?",
-            "options": ["Yes, and there is no restriction", "Yes, as long as the applications don't access the port at the same exact time", "Yes, as long as each of TCP and UDP notify IP about this", "No"],
-            "correct_index": "0"
-        },
-        {
             "question": "In IP's header, the Time-To-Live field is used to make sure the IP packet reaches the correct destination",
             "options": ["True", "False", "", ""],
             "correct_index": "1"
@@ -86,34 +66,9 @@
             "correct_index": "1"
         },
         {
-            "question": "Which of the following could be a reason that an application uses TCP instead of UDP?",
-            "options": ["TCP's flow control ensures faster transmission than UDP on a given link", "Unlike UDP, TCP can travel through different paths in the network", "UDP's transmission speed is limited because of its Error Control", "TCP provides reliable transmission"],
-            "correct_index": "3"
-        },
-        {
-            "question": "Even though TCP has many features that UDP doesn't, an application might use UDP instead of TCP because:",
-            "options": ["UDP provides flow control", "If a router goes down in the network, TCP's connection breaks", "TCP has more overhead than UDP", "None of the above"],
-            "correct_index": "2"
-        },
-        {
-            "question": "If the host name www.sfu.ca maps to IP address 142.58.228.150, then:",
-            "options": ["the fully qualified domain name is ca.sfu.www", "the fully qualified inverse domain is 142.58.228.150.in-addr.arpa", "the fully qualified inverse domain is 150.228.58.142.in-addr.arpa", "None of the above"],
-            "correct_index": "3"
-        },
-        {
-            "question": "Which of the following statements is correct?",
-            "options": ["RESTful API, which runs on HTTP which in turn runs on TCP, runs faster than token-based messaging with sockets", "CORBA works only between Java programs", "Remote Procedure Call (RPC) works with C programs on any Operating System that can run C", "None of the above"],
-            "correct_index": "2"
-        },
-        {
             "question": "In DNS, an authoritative answer is obtained using:",
             "options": ["iterative name resolution", "recursive name resolution", "TLS or TCP instead of UDP", "None of the above"],
             "correct_index": "0"
-        },
-        {
-            "question": "In DNS:",
-            "options": ["the primary server is used as the name server, and the secondary server as the resolver", "the secondary server is used as the name server, and the primary server as the resolver", "the primary server is used for iterative name resolution, and the secondary server for recursive name resolution", "None of the above"],
-            "correct_index": "3"
         },
         {
             "question": "TCP's Maximum Segment Size (MSS) is ...",
