@@ -425,8 +425,8 @@ class Server:
 
     def broadcast_game_over(self):
         """Notify all clients the game has ended with final scores."""
-        scores = {pid: p.score for pid, p in self.players.items()}
-        self.broadcast({"type": "game_over", "players": scores})
+        players_data = {pid: {"x": p.x, "y": p.y, "score": p.score} for pid, p in self.players.items()}
+        self.broadcast({"type": "game_over", "players": players_data})
 
     def stop(self):
         """Shutdown server and cleanup resources."""
