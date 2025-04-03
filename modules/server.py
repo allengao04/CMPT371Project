@@ -312,6 +312,23 @@ class Server:
                         self.broadcast_game_over()
                         break
 
+            elif msg_type == "cancel_quiz" and not self.lobby_active:
+                mic_id = data.get("mic_id")
+                if mic_id is None:
+                    # Optionally log or send back an error
+                    continue
+                with self.lock:
+                    mic_obj = next((m for m in self.microphones if m.id == mic_id), None)
+                    if mic_obj and mic_obj.active_by == player_id:
+                        mic_obj.active_by = None
+                        try:
+                            mic_obj.lock.release()
+                        except RuntimeError:
+                            pass
+                        mic_obj.cooldowns[player_id] = time.time() + 3
+                        info_msg = {"type": "info", "message": "Quiz cancelled. You may try again."}
+                        send_data(self.clients[player_id], info_msg)
+
             # (Handle additional message types here if needed)
         # Cleanup on disconnect
         with self.lock:

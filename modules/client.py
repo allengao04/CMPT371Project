@@ -240,6 +240,7 @@ class Client:
                             # Interaction key (E or Space) to trigger quiz at microphone
                             elif event.key in (pygame.K_e, pygame.K_SPACE):
                                 self.send_interact()
+
                         else:
                             # If answering a question
                             selected_index = None
@@ -251,6 +252,13 @@ class Client:
                                 selected_index = 2
                             elif event.key == pygame.K_4:
                                 selected_index = 3
+                            elif event.key == pygame.K_ESCAPE:
+                                mic_id = self.current_question["id"] if self.current_question else None
+                                with self.lock:
+                                    self.in_question = False
+                                    self.current_question = None
+                                    self.last_answer_correct = None
+                                send_data(self.sock, {"type": "cancel_quiz", "mic_id": mic_id})
                             
                             if selected_index is not None and self.current_question:
                                 if 0 <= selected_index < len(self.current_question["options"]):
