@@ -1,4 +1,5 @@
 import pygame
+import threading
 import random
 
 PLAYER_SPEED = 10 # move 10 pixelx per movement
@@ -27,6 +28,20 @@ class Player:
     
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, (self.x + self.size // 2, self.y + self.size // 2), self.size // 2)
+    
+    
+class Microphone:
+    def __init__(self, mid, x, y, question, options, correct_index):
+        self.id = mid
+        self.x = x
+        self.y = y
+        self.question = question
+        self.options = options
+        self.correct_index = correct_index
+        self.answered = False
+        self.active_by = None  # player id currently interacting (if any)
+        self.lock = threading.RLock()  # NEW: dedicated mutex lock for concurrency
+
 
 class GameWorld:
     def __init__(self, width, height, tile_size):
