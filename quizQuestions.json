@@ -1,14 +1,129 @@
 {
     "Questions": [
         {
-            "question": "What is the capital of France?",
-            "options": ["Paris", "London", "Rome", "Berlin"],
-            "answer": "Paris"
+            "question": "A network router needs to implement ...",
+            "options": ["the physical layer", "the data link layer", "the network layer", "all of the above"],
+            "correct_index": "3"
         },
         {
-            "question": "2 + 2 * 2 = ?",
-            "options": ["6", "8", "4", "2"],
-            "answer": "6"
+            "question": "Which of the TCP/IP layers handles the dividing of the incoming PDUs into frames?",
+            "options": ["The physical layer", "The data link layer", "The network layer", "None of the above"],
+            "correct_index": "1"
+        },
+        {
+            "question": "In simplex transmission mode, any device can send data to any other device, though only in one direction at a time.",
+            "options": ["True", "False", "", ""],
+            "correct_index": "1"
+        },
+        {
+            "question": "A repeater connects 2 LANs together. Part of the repeater's operation includes deciding whether or not to forward the signals received from one subnet to the other subnet.",
+            "options": ["True", "False", "", ""],
+            "correct_index": "1"
+        },
+        {
+            "question": "An EM Wave's wavelength depends on:",
+            "options": ["propagation speed", "transmission speed", "bandwidth", "all of the above"],
+            "correct_index": "0"
+        },
+        {
+            "question": "To transmit, a station listens to the medium and if the medium is idle, the station transmits immediately.",
+            "options": ["True for both Ethernet and WiFi", "False for both Ethernet and WiFi", "True for Ethernet but false for WiFi", "True for WiFi but false for Ethernet"],
+            "correct_index": "2"
+        },
+        {
+            "question": "While a WiFi station is counting down its random backoff time, it suddenly hears a frame on the medium. What does the station do?",
+            "options": ["Continue counting", "Pause counting", "Restart counting from the beginning", "Apply the binary exponential backoff procedure"],
+            "correct_index": "1"
+        },
+        {
+            "question": "In an IEEE 802.1Q VLAN, all bridges must implement the IEEE 802.1Q's VLAN field",
+            "options": ["True", "False", "", ""],
+            "correct_index": "1"
+        },
+        {
+            "question": "In Ethernet, the CSMA/CD algorithm gives up transmitting a frame after 16 successive collisions, but the MAC sublayer itself will try to retransmit that frame after a timeout",
+            "options": ["True", "False", "", ""],
+            "correct_index": "1"
+        },
+        {
+            "question": "The preamble field in the header of Ethernet's MAC sublayer is used for ...",
+            "options": ["clock synchronization", "sender identification", "frame position in the overall sequence", "None of the above"],
+            "correct_index": "0"
+        },
+        {
+            "question": "When demultiplexing from the transport layer to the application layer, the transport layer looks at the ...",
+            "options": ["IP address of the source", "IP address of the destination", "'protocol' field in the IP header", "'port number' in the header"],
+            "correct_index": "3"
+        },
+        {
+            "question": "In IP's header, the Time-To-Live field is used to make sure the IP packet reaches the correct destination",
+            "options": ["True", "False", "", ""],
+            "correct_index": "1"
+        },
+        {
+            "question": "What is the purpose of the “Window Size” field in the TCP header?",
+            "options": ["To be used in Error Control", "To be used in Flow Control", "To be used in Congestion Control", "Both the second and third answers"],
+            "correct_index": "1"
+        },
+        {
+            "question": "In DNS, an authoritative answer is obtained using:",
+            "options": ["iterative name resolution", "recursive name resolution", "TLS or TCP instead of UDP", "None of the above"],
+            "correct_index": "0"
+        },
+        {
+            "question": "TCP's Maximum Segment Size (MSS) is ...",
+            "options": ["used to avoid IP fragmentation", "used for flow control", "negotiated after the 3-way handshake", "None of the above"],
+            "correct_index": "0"
+        },
+        {
+            "question": "The 'Urgent pointer' field in TCP's header is used to indicate exactly where the urgent data resides.",
+            "options": ["True", "False", "", ""],
+            "correct_index": "1"
+        },
+        {
+            "question": "A Top-Level Domain (TLD) server must know the IP addresses of all hosts in its domain.",
+            "options": ["True", "False", "", ""],
+            "correct_index": "1"
+        },
+        {
+            "question": "Most DNS services use UDP instead of TCP because both a DNS question and a DNS answer are typically only 1 packet each.",
+            "options": ["True", "False", "", ""],
+            "correct_index": "0"
+        },
+        {
+            "question": "ICMP sits on top of:",
+            "options": ["UDP", "TCP", "IP", "None of the above"],
+            "correct_index": "2"
+        },
+        {
+            "question": "An IP network is considered congested when:",
+            "options": ["packets are dropped", "packets are delayed, causing service degradation", "packets cannot be routed", "Both first and second answers"],
+            "correct_index": "3"
+        },
+        {
+            "question": "If TCP's retransmission timer (RTO) times out, but the packet is just delayed and not yet dropped, TCP will not reduce its congestion window.",
+            "options": ["True", "False", "", ""],
+            "correct_index": "1"
+        },
+        {
+            "question": "In TCP Tahoe congestion control, when a packet loss is experienced, the new slow start threshold is set to one half of the previous threshold.",
+            "options": ["True", "False", "", ""],
+            "correct_index": "1"
+        },
+        {
+            "question": "When congestion is about to happen, the receiver sets the ECN bits in IP's header to 10 or 01.",
+            "options": ["True", "False", "", ""],
+            "correct_index": "1"
+        },
+        {
+            "question": "When congestion is detected, the sender sets the ECE bit in TCP's header to 1.",
+            "options": ["True", "False", "", ""],
+            "correct_index": "1"
+        },
+        {
+            "question": "The purpose of Random Early Detection is to:",
+            "options": ["use packet loss to prevent congestion", "reduce TCP traffic", "reduce UDP traffic", "Both the first and second answers"],
+            "correct_index": "0"
         }
     ]
 }
