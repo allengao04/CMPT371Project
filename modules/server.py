@@ -189,6 +189,10 @@ class Server:
             exit_text = pygame.font.Font(None, 40).render("Press any key to exit", True, (0, 0, 0))
             exit_x = (1000 - exit_text.get_width()) // 2
             self.lobby_screen.blit(exit_text, (exit_x, y_pos + 50))
+        # Show info message if active
+        if hasattr(self, 'info_message') and time.time() - self.info_message_time < 3:
+            msg_surface = self.font.render(self.info_message, True, (255, 0, 0))
+            self.lobby_screen.blit(msg_surface, (self.lobby_screen.get_width()//2 - msg_surface.get_width()//2, 10))
 
         pygame.display.flip()
 
@@ -211,6 +215,12 @@ class Server:
         """When the server interacts with a mic, enter quiz mode."""
         for mic in self.microphones:
             if mic.x == player.x and mic.y == player.y and not mic.answered:
+                
+                if mic.cooldowns.get(self.server_player_id, 0) > time.time():
+                    self.info_message = "Please wait 3 seconds before trying again."
+                    self.info_message_time = time.time()
+                    return
+
                 if mic.lock.acquire(blocking=False):
                     if mic.active_by is None:
                         mic.active_by = player.id
@@ -254,6 +264,7 @@ class Server:
                                                 mic.lock.release()
                                             except RuntimeError:
                                                 pass
+                                            mic.cooldowns[self.server_player_id] = time.time() + 3
                                         self.in_question = False
                                         self.current_question = None
                                         self.last_answer_correct = None
@@ -269,6 +280,16 @@ class Server:
                                 elif event.key == pygame.K_4:
                                     selected_index = 3
                                 elif event.key == pygame.K_ESCAPE:
+                                    if self.current_question:
+                                        mic_id = self.current_question["id"]
+                                        mic = next((m for m in self.microphones if m.id == mic_id), None)
+                                        if mic:
+                                            mic.active_by = None
+                                            try:
+                                                mic.lock.release()
+                                            except RuntimeError:
+                                                pass
+                                            mic.cooldowns[self.server_player_id] = time.time() + 3
                                     # Cancel quiz mode if desired
                                     self.in_question = False
                                     self.current_question = None
@@ -297,6 +318,7 @@ class Server:
                                                 mic.lock.release()
                                             except RuntimeError:
                                                 pass
+                                            mic.cooldowns[self.server_player_id] = time.time() + 3
                                         self.broadcast(self.build_state_message())
                             else:
                                 # Normal movement and interact
