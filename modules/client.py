@@ -356,7 +356,7 @@ class Client:
                         # Create an overlay surface with transparency and a border for UI enhancement
                         overlay = pygame.Surface((quiz_box_width, quiz_box_height), pygame.SRCALPHA)
                         overlay.fill((255, 255, 255, 230))  # White with slight transparency
-                        pygame.draw.rect(overlay, (0, 0, 0), overlay.get_rect(), 2)  # Black border
+                        pygame.draw.rect(overlay, self.color_text, overlay.get_rect(), 2)  # Black border
                         self.screen.blit(overlay, (quiz_box_x, quiz_box_y))
 
                         # Set fonts for the question and options
@@ -416,6 +416,7 @@ class Client:
                         "Press any key to exit", True, self.color_text)
                     exit_x = (self.screen.get_width() - exit_text.get_width()) // 2
                     self.screen.blit(exit_text, (exit_x, y_pos + 50))
+                    
             if hasattr(self, 'info_message') and time.time() - self.info_message_time < 3:
                 msg_surface = self.font.render(self.info_message, True, (255, 0, 0))
                 self.screen.blit(msg_surface, (self.screen.get_width()//2 - msg_surface.get_width()//2, 10))    
