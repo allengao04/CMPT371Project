@@ -2,16 +2,10 @@ import pygame
 import socket
 import threading
 import time
+from game import PLAYER_COLORS
 from network import send_data, recv_data
 from helper import args
 
-#setting player color 
-PLAYER_COLORS = {
-    1: (255, 0, 0),    # Red
-    2: (0, 255, 0),    # Green
-    3: (0, 0, 255),    # Blue
-    4: (255, 255, 0)   # Yellow
-}
 
 class Client:
     def __init__(self, host, port):
@@ -232,6 +226,7 @@ class Client:
                             send_data(self.sock, {"type": "player_ready"})
                 
                 # Handle game interactions (only when not in lobby and not game over)
+                
                 elif not self.game_over:
                     if event.type == pygame.KEYDOWN:
                         if not self.in_question:
@@ -416,7 +411,7 @@ class Client:
                         "Press any key to exit", True, self.color_text)
                     exit_x = (self.screen.get_width() - exit_text.get_width()) // 2
                     self.screen.blit(exit_text, (exit_x, y_pos + 50))
-                    
+
             if hasattr(self, 'info_message') and time.time() - self.info_message_time < 3:
                 msg_surface = self.font.render(self.info_message, True, (255, 0, 0))
                 self.screen.blit(msg_surface, (self.screen.get_width()//2 - msg_surface.get_width()//2, 10))    

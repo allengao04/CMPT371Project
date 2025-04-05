@@ -5,39 +5,12 @@ import random
 import json
 import pygame
 from network import send_data, recv_data
+from game import Microphone, Player, PLAYER_COLORS
 from helper import args
 
-# Setting player colors
-PLAYER_COLORS = {
-    1: (255, 0, 0),    # Red
-    2: (0, 255, 0),    # Green
-    3: (0, 0, 255),    # Blue
-    4: (255, 255, 0)   # Yellow
-}
-
-class Player:
-    def __init__(self, pid, x, y):
-        self.id = pid
-        self.x = x
-        self.y = y
-        self.score = 0
-        self.ready = False  # For lobby readiness
-
-class Microphone:
-    def __init__(self, mid, x, y, question, options, correct_index):
-        self.id = mid
-        self.x = x
-        self.y = y
-        self.question = question
-        self.options = options
-        self.correct_index = correct_index
-        self.answered = False
-        self.active_by = None  # player id currently interacting (if any)
-        self.lock = threading.RLock()  # Dedicated lock for concurrency control
-        self.cooldowns = {}  # Dict: {player_id: timestamp_until_accessible}
 
 class Server:
-    def __init__(self, host, port, max_players=4, time_limit=120):
+    def __init__(self, host, port, time_limit, max_players=4):
         self.host = host
         self.port = port
         self.max_players = max_players
@@ -479,7 +452,7 @@ class Server:
                         state_msg = self.build_state_message()
                         self.broadcast(state_msg)
                 self.draw_game()
-                clock.tick(30)
+                clock.tick(60)
             # Wait for key press at game over screen
             while self.game_over:
                 for event in pygame.event.get():
@@ -487,7 +460,7 @@ class Server:
                         self.stop()
                         return
                 self.draw_game()
-                clock.tick(30)
+                clock.tick(60)
         except KeyboardInterrupt:
             print("Server shutting down (KeyboardInterrupt).")
         finally:
@@ -583,7 +556,7 @@ class Server:
                 self.lobby_screen.blit(text, text_rect)
                 y += 40
             pygame.display.flip()
-            clock.tick(30)
+            clock.tick(60)
         # pygame.quit()
 
     def start_game_countdown(self):
@@ -804,8 +777,11 @@ class Server:
         print("Server stopped.")
 
 if __name__ == "__main__":
+    # Parse Arugments
     ip_address = args.ip_address
     port = int(args.port)
     time_limit = int(args.time_limit)
+
+    # start server
     server = Server(host=ip_address, port=port, time_limit=time_limit)
     server.start()
