@@ -1,5 +1,9 @@
 import threading
 
+'''
+    Object Class Definition
+'''
+
 # Setting player colors
 PLAYER_COLORS = {
     1: (255, 0, 0),    # Red

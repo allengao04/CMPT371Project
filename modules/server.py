@@ -8,6 +8,16 @@ from network import send_data, recv_data
 from game import Microphone, Player, PLAYER_COLORS
 from helper import args
 
+'''
+    Server side code that is responsible for:
+        - handle clients when they try to connect with the server
+        - communicate with the client through TCP socket and custom messaging scheme
+        - server will initialize a client object as well
+        - draw lobby screen and game play screen
+        - reading quiz questions from quizQuestions.json and handle the creation of the quiz objects
+        - handling cocurrency between 'microphone' objects
+'''
+
 
 class Server:
     def __init__(self, host, port, time_limit, max_players=4):
@@ -50,7 +60,7 @@ class Server:
             self.microphones = []
             mic_id = 1
             for question in selected_questions:
-                # Generate a random valid position (not on an obstacle)
+                # Generate a random valid position
                 while True:
                     x = random.randint(0, self.map_width - 1)
                     y = random.randint(0, self.map_height - 1)
@@ -60,6 +70,7 @@ class Server:
                 mic_id += 1
         except Exception as e:
             print(f"Error loading quiz bank: {e}")
+            # set empty questions and objects when error
             self.microphones = []
             self.unused_questions = []
 
@@ -106,77 +117,6 @@ class Server:
 
     def draw_game(self):
         self.lobby_screen.fill((200, 200, 200))  # Light gray background
-
-        # # Draw microphones (orange squares)
-        # for mic in self.microphones:
-        #     if not mic.answered:
-        #         rect = pygame.Rect(mic.x * 20, mic.y * 20, 20, 20)
-        #         pygame.draw.rect(self.lobby_screen, (255, 165, 0), rect)
-
-        # # Draw players (server in red, clients in green)
-        # for pid, player in self.players.items():
-        #     color = (255, 0, 0) if pid == self.server_player_id else (0, 255, 0)
-        #     rect = pygame.Rect(player.x * 20, player.y * 20, 20, 20)
-        #     pygame.draw.rect(self.lobby_screen, color, rect)
-
-        # # Draw timer if game has started
-        # if self.start_time:
-        #     elapsed = int(time.time() - self.start_time)
-        #     time_left = max(0, self.time_limit - elapsed)
-        #     timer_text = f"Time: {time_left // 60:02d}:{time_left % 60:02d}"
-        #     txt_surface = self.font.render(timer_text, True, (0, 0, 0))
-        #     self.lobby_screen.blit(txt_surface, (20, 20))
-
-        # # Draw quiz overlay if active
-        # if self.in_question and self.current_question:
-        #     quiz_box_width = 700
-        #     quiz_box_height = 400
-        #     quiz_box_x = (1000 - quiz_box_width) // 2
-        #     quiz_box_y = (800 - quiz_box_height) // 2
-        #     # Draw overlay background
-        #     pygame.draw.rect(self.lobby_screen, self.color_overlay_bg,
-        #                      (quiz_box_x, quiz_box_y, quiz_box_width, quiz_box_height))
-        #     # Draw question text
-        #     question_surface = pygame.font.Font(None, 48).render(
-        #         self.current_question["text"], True, self.color_overlay_text)
-        #     self.lobby_screen.blit(question_surface, (quiz_box_x + 20, quiz_box_y + 30))
-        #     # Draw options
-        #     for idx, option in enumerate(self.current_question["options"], start=1):
-        #         option_text = f"{idx}. {option}"
-        #         option_surface = pygame.font.Font(None, 36).render(
-        #             option_text, True, self.color_overlay_text)
-        #         self.lobby_screen.blit(option_surface,
-        #                                (quiz_box_x + 40, quiz_box_y + 50 + (idx * 60)))
-        #     # If the last answer was wrong, show feedback and keep the overlay active
-        #     if self.last_answer_correct is False:
-        #         feedback = pygame.font.Font(None, 32).render("Incorrect! Press ESC to cancel.", True, (255, 0, 0))
-        #         self.lobby_screen.blit(feedback, (quiz_box_x + 40, quiz_box_y + quiz_box_height - 60))
-
-        # # If game is over, draw game over overlay
-        # if self.game_over:
-        #     overlay = pygame.Surface(self.lobby_screen.get_size())
-        #     overlay.fill((200, 200, 200))
-        #     self.lobby_screen.blit(overlay, (0, 0))
-        #     title_font = pygame.font.Font(None, 80)
-        #     title = title_font.render("GAME OVER", True, (0, 0, 0))
-        #     title_x = (1000 - title.get_width()) // 2
-        #     self.lobby_screen.blit(title, (title_x, 100))
-        #     # Display final scores (sorted)
-        #     sorted_scores = sorted(self.players.items(), key=lambda item: item[1].score, reverse=True)
-        #     y_pos = 180
-        #     for rank, (pid, player) in enumerate(sorted_scores, start=1):
-        #         score_text = f"{rank}. Player {pid}: {player.score}"
-        #         score_surface = pygame.font.Font(None, 50).render(score_text, True, (0, 0, 0))
-        #         score_x = (1000 - score_surface.get_width()) // 2
-        #         self.lobby_screen.blit(score_surface, (score_x, y_pos))
-        #         y_pos += 50
-        #     exit_text = pygame.font.Font(None, 40).render("Press any key to exit", True, (0, 0, 0))
-        #     exit_x = (1000 - exit_text.get_width()) // 2
-        #     self.lobby_screen.blit(exit_text, (exit_x, y_pos + 50))
-        # # Show info message if active
-        # if hasattr(self, 'info_message') and time.time() - self.info_message_time < 3:
-        #     msg_surface = self.font.render(self.info_message, True, (255, 0, 0))
-        #     self.lobby_screen.blit(msg_surface, (self.lobby_screen.get_width()//2 - msg_surface.get_width()//2, 10))
 
         if not self.game_over:
             # Draw microphones
@@ -357,8 +297,9 @@ class Server:
                         return
                     elif event.type == pygame.KEYDOWN:
                         with self.lock:
+                            # In quiz mode
                             if self.in_question:
-                                # In quiz mode: if last answer was wrong, do not process number keys until ESC is pressed.
+                                # if last answer was wrong, do not process number keys until ESC is pressed.
                                 if self.last_answer_correct is False:
                                     if event.key == pygame.K_ESCAPE:
                                         # Cancel quiz mode and allow new attempts (unlock mic)
@@ -385,7 +326,7 @@ class Server:
                                     selected_index = 2
                                 elif event.key == pygame.K_4:
                                     selected_index = 3
-                                elif event.key == pygame.K_ESCAPE:
+                                elif event.key == pygame.K_ESCAPE: # When 'ECS' is pressed, apply 3 second cooldown
                                     if self.current_question:
                                         mic_id = self.current_question["id"]
                                         mic = next((m for m in self.microphones if m.id == mic_id), None)
@@ -395,17 +336,20 @@ class Server:
                                                 mic.lock.release()
                                             except RuntimeError:
                                                 pass
-                                            mic.cooldowns[self.server_player_id] = time.time() + 3
+                                            mic.cooldowns[self.server_player_id] = time.time() + 3 # 3 second cooldown
                                     # Cancel quiz mode if desired
                                     self.in_question = False
                                     self.current_question = None
                                     self.last_answer_correct = None
                                     self.broadcast(self.build_state_message())
                                     continue
+
+                                # Check if key pressed equal the correct answer
                                 if selected_index is not None and self.current_question:
                                     mic_id = self.current_question["id"]
                                     mic = next((m for m in self.microphones if m.id == mic_id), None)
                                     if mic:
+                                        # Correct answer
                                         if selected_index == mic.correct_index:
                                             mic.answered = True
                                             mic.active_by = None
@@ -414,6 +358,8 @@ class Server:
                                             self.players[self.server_player_id].score += 1
                                             self.last_answer_correct = True
                                             print("Server answered correctly!")
+
+                                        # Incorrect answer and release the lock from the object  
                                         else:
                                             # On wrong answer, show feedback and keep the quiz overlay active.
                                             self.last_answer_correct = False
@@ -426,6 +372,8 @@ class Server:
                                                 pass
                                             mic.cooldowns[self.server_player_id] = time.time() + 3
                                         self.broadcast(self.build_state_message())
+
+                            # Action not in quiz mode 
                             else:
                                 # Normal movement and interact
                                 player = self.players.get(self.server_player_id)
@@ -469,7 +417,7 @@ class Server:
 
     def accept_clients(self):
         """Accept incoming client connections and initialize players."""
-        next_player_id = 2
+        next_player_id = 2 # Since server is player 1
         while not self.game_over:
             try:
                 client_sock, addr = self.server_socket.accept()
@@ -480,6 +428,7 @@ class Server:
                     send_data(client_sock, {"type": "error", "message": "Server full"})
                     client_sock.close()
                     continue
+                # Initialize configuration for client
                 player_id = next_player_id
                 spawn_x, spawn_y = self.find_spawn_position(player_id)
                 next_player_id += 1
@@ -487,7 +436,7 @@ class Server:
                 self.players[player_id] = new_player
                 self.clients[player_id] = client_sock
                 print(f"Player {player_id} connected from {addr}, spawn at ({spawn_x},{spawn_y})")
-                # Send initial game state
+                # Send initial game state to client
                 init_msg = {
                     "type": "init",
                     "player_id": player_id,
@@ -504,8 +453,15 @@ class Server:
 
         print("Stopped accepting new clients.")
 
+    # Helper function to find spawn location base on player id
     def find_spawn_position(self, player_id):
         """Assign players to predefined corners of the map."""
+        '''
+            Player 1: top-left corner
+            Player 2: top-right corner
+            Player 3: bottom-left corner
+            Player 4: bottom-right corner
+        '''
         grid_width = self.map_width
         grid_height = self.map_height
         corner_positions = {
@@ -537,6 +493,7 @@ class Server:
                 if event.type == pygame.QUIT:
                     self.stop()
                     return
+            # Draw Lobby and display IP address and Port number
             self.lobby_screen.fill((30, 30, 60))
             title = self.font.render("Server Lobby - Waiting for Players", True, (255, 255, 255))
             server_ip = self.font.render(f"Server IP: {self.host}", True, (255, 255, 255))
@@ -548,6 +505,8 @@ class Server:
             self.lobby_screen.blit(server_ip, ip_rect)
             self.lobby_screen.blit(server_port, port_rect)
             y = 150
+
+            # Draw each player's Ready Status
             for pid, player in self.players.items():
                 status = "Ready" if player.ready else "Waiting"
                 color = (0, 255, 0) if player.ready else (255, 0, 0)
@@ -557,7 +516,6 @@ class Server:
                 y += 40
             pygame.display.flip()
             clock.tick(60)
-        # pygame.quit()
 
     def start_game_countdown(self):
         """10-second countdown before game starts"""
@@ -586,6 +544,7 @@ class Server:
                         self.broadcast_lobby_update()
                         if all(p.ready for p in self.players.values()):
                             self.start_game_countdown()
+                            
             elif msg_type == "move" and not self.lobby_active:
                 direction = data.get("direction")
                 with self.lock:
@@ -646,6 +605,7 @@ class Server:
                         else:
                             info_msg = {"type": "info", "message": "Microphone is currently in use by another player."}
                             send_data(self.clients[player_id], info_msg)
+
             elif msg_type == "answer" and not self.lobby_active:
                 mic_id = data.get("mic_id")
                 answer_idx = data.get("answer")
@@ -688,7 +648,6 @@ class Server:
                             new_mic = Microphone(new_mic_id, new_x, new_y, new_question["question"], new_question["options"], new_question["correct_index"])
                             self.microphones.append(new_mic)
                     else: # Incorrect answer: release the microphone for others.
-                        #TODO: Set cooldown on mic-player pair, such that when player exist the mic object, it needs to wait until it can enter the mic object again, but other players does not need to wait
                         mic_obj.active_by = None
                         mic_obj.cooldowns[player_id] = time.time() + 3
                         mic_obj.lock.release()
@@ -715,8 +674,6 @@ class Server:
                         mic_obj.cooldowns[player_id] = time.time() + 3
                         info_msg = {"type": "info", "message": "Quiz cancelled. You may try again."}
                         send_data(self.clients[player_id], info_msg)
-
-            # (Handle additional message types here if needed)
 
         # Cleanup on disconnect
         with self.lock:
@@ -782,6 +739,6 @@ if __name__ == "__main__":
     port = int(args.port)
     time_limit = int(args.time_limit)
 
-    # start server
+    # Start server
     server = Server(host=ip_address, port=port, time_limit=time_limit)
     server.start()

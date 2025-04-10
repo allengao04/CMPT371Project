@@ -11,11 +11,21 @@ endif
 ###########################
 #		 VARIABLES
 ###########################
+
 PORT = 5000
 ifeq ($(origin IP_ADDRESS), undefined)
 IP_ADDRESS != ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'
 else
-IP_ADDRESS = IP_ADDRESS
+IP_ADDRESS := IP_ADDRESS
+endif
+ifeq ($(origin PORT), undefined)
+PORT := 5000
+else
+PORT := PORT
+endif
+
+ifeq ($(IP_ADDRESS),)
+    $(error IP_ADDRESS is empty, Please set it before when running Make.)
 endif
 
 
@@ -23,26 +33,26 @@ endif
 #	       PATHS
 ###########################
 
-MODULES = ./modules
-SERVER_PROGRAM = $(MODULES)/server.py
-CLIENT_PROGRAM = $(MODULES)/client.py
+MODULES := ./modules
+SERVER_PROGRAM := $(MODULES)/server.py
+CLIENT_PROGRAM := $(MODULES)/client.py
 
 ###########################
 #	 GAME CONFIGURATIONS
 ###########################
 
 ifeq ($(origin TIME_LIMIT), undefined)
-TIME_LIMIT = 120 # 2 minutes
+TIME_LIMIT := 120 # 2 minutes
 else
-TIME_LIMIT = TIME_LIMIT
+TIME_LIMIT := TIME_LIMIT
 endif
 
 ###########################
 #		 ARGUMENTS
 ###########################
 
-SERVER_ARG = --ip-address $(IP_ADDRESS) --port $(PORT) --time-limit $(TIME_LIMIT)
-CLIENT_ARG = --ip-address $(IP_ADDRESS) --port $(PORT)
+SERVER_ARG := --ip-address $(IP_ADDRESS) --port $(PORT) --time-limit $(TIME_LIMIT)
+CLIENT_ARG := --ip-address $(IP_ADDRESS) --port $(PORT)
 
 
 ###########################

@@ -6,6 +6,13 @@ from game import PLAYER_COLORS
 from network import send_data, recv_data
 from helper import args
 
+'''
+    Intialize a Client object and connect to server with host and port:
+        - drawing lobby screen and game screen when it is running
+        - communicate with the server with TCP socket and a custom messaging scheme
+        - handle game state when receiving data from the server
+'''
+
 
 class Client:
     def __init__(self, host, port):
@@ -47,19 +54,21 @@ class Client:
         
         pygame.display.set_caption("Multiplayer Quiz Game")
         self.font = pygame.font.SysFont(None, 24)
-        # Define some colors for drawing
+        # Define some colors
         self.color_bg = (200, 200, 200)         # background color
         self.color_player = (0, 0, 255)         # local player color
         self.color_other_player = (0, 255, 0)   # other players color
         self.color_microphone = (255, 165, 0)   # microphone object color (orange)
-        self.color_text = (0, 0, 0)            # text color (black)
+        self.color_text = (0, 0, 0)             # text color (black)
         self.color_overlay_bg = (255, 255, 255) # overlay background (white)
-        self.color_overlay_text = (0, 0, 0)    # overlay text color (black)
+        self.color_overlay_text = (0, 0, 0)     # overlay text color (black)
 
     def connect_to_server(self):
         """Connect to the game server and perform initial handshake to get game state."""
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
+
+        # initialize data sent from server when connection is setup
         init_data = recv_data(self.sock)
         if init_data and init_data.get("type") == "init":
             with self.lock:
@@ -203,7 +212,6 @@ class Client:
         """=Return a unique color for each player ID."""
         return PLAYER_COLORS.get(player_id, (200, 200, 200))  # Gray fallback
     
-    
     def run(self):
         """Main loop for handling user input and rendering the game state."""
         listener = threading.Thread(target=self.network_listener, daemon=True)
@@ -226,7 +234,6 @@ class Client:
                             send_data(self.sock, {"type": "player_ready"})
                 
                 # Handle game interactions (only when not in lobby and not game over)
-                
                 elif not self.game_over:
                     if event.type == pygame.KEYDOWN:
                         if not self.in_question:
