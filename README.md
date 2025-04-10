@@ -51,6 +51,12 @@ Example configuration:
 make start-server TIME_LIMIT=300 # optional input
 ```
 
+### Debug
+If unable to start a server, try setting up your ip address first in the terminal and use it in Makefile:
+```
+export IP_ADDRESS=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1')
+make start-server IP_ADDRESS=${IP_ADDRESS}
+```
 
 ## Team Members
 - Yuhao Gao 301545007
@@ -60,5 +66,10 @@ make start-server TIME_LIMIT=300 # optional input
 - Adam Siergiej 301562042
 
 - Uros Kovacevic 301544276
-## Technologies Used
-## Acknowledgments
+
+### References
+[Python Socket](https://docs.python.org/3/library/socket.html)
+[Receiving Large Amount of Data](https://stackoverflow.com/questions/17667903/python-socket-receive-large-amount-of-data)
+[Basic Python TCP Socket Server & Client](https://stackoverflow.com/questions/48406991/basic-python-tcp-socket-server-client)
+[PyGame](https://pygame.readthedocs.io/en/latest/1_intro/intro.html)
+[Serializing Data](https://docs.python.org/3/library/pickle.html)
