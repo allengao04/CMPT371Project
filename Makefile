@@ -16,16 +16,7 @@ PORT = 5000
 ifeq ($(origin IP_ADDRESS), undefined)
 IP_ADDRESS != ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'
 else
-IP_ADDRESS := IP_ADDRESS
-endif
-ifeq ($(origin PORT), undefined)
-PORT := 5000
-else
-PORT := PORT
-endif
-
-ifeq ($(IP_ADDRESS),)
-    $(error IP_ADDRESS is empty, Please set it before when running Make.)
+IP_ADDRESS = IP_ADDRESS
 endif
 
 
