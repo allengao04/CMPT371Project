@@ -104,7 +104,7 @@ make start-server TIME_LIMIT=300
 
 ### Quiz Prompt  
 > Multiple-choice overlay when mic is triggered  
-![Quiz UI](src/quizPrompt.png)
+![Quiz UI](src/quizprompt.png)
 
 ### Game Over  
 > Displays all players’ final scores  
